@@ -86,8 +86,45 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
     });
+    builder.addCase(verifyOtpThunk.pending, (state) => {
+  state.isLoading = true;
+  state.error = null;
+});
+builder.addCase(verifyOtpThunk.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.user = action.payload.user;
+  state.token = action.payload.token;
+  state.isAuthenticated = true;
+});
+builder.addCase(verifyOtpThunk.rejected, (state, action) => {
+  state.isLoading = false;
+  state.error = action.payload as string;
+});
   },
 });
+
+export const verifyOtpThunk = createAsyncThunk(
+  'auth/verifyOtp',
+  async (payload: { phone: string; code: string }, { rejectWithValue }) => {
+    try {
+      // Mock for now — real API when backend is ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        user: {
+          id: '1',
+          name: 'Test User',
+          phone: payload.phone,
+          role: 'CAR_OWNER' as const,
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+        },
+        token: 'mock-token-123',
+      };
+    } catch {
+      return rejectWithValue('OTP verification failed');
+    }
+  }
+);
 
 export const { logout, clearError, setUser } = authSlice.actions;
 export default authSlice.reducer;
