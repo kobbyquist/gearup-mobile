@@ -1,93 +1,102 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, User } from '../../types';
-import * as SecureStore from 'expo-secure-store';
+import { authService } from '../../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface AuthState {
+  user: any | null;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
+}
 
 const initialState: AuthState = {
   user: null,
   token: null,
-  isLoading: false,
-  isAuthenticated: false,
+  loading: false,
   error: null,
 };
 
-export const loginUser = createAsyncThunk(
-  'auth/login',
-  async (payload: { phone: string; password: string }, { rejectWithValue }) => {
+export const registerUser = createAsyncThunk(
+  'auth/register',
+  async (data: { name: string; email: string; password: string; phone: string; role: 'OWNER' | 'MECHANIC' }, { rejectWithValue }) => {
     try {
-      // Temporary mock — real API call comes when backend is ready
-      return {
-        user: {
-          id: '1',
-          name: 'Test User',
-          phone: payload.phone,
-          role: 'CAR_OWNER' as const,
-          isVerified: true,
-          createdAt: new Date().toISOString(),
-        },
-        token: 'mock-token-123',
-      };
+      return await authService.register(data);
     } catch (error: any) {
-      return rejectWithValue('Login failed');
+      return rejectWithValue(error.message);
     }
   }
 );
 
-export const restoreSession = createAsyncThunk(
-  'auth/restoreSession',
-  async (_, { rejectWithValue }) => {
+export const loginUser = createAsyncThunk(
+  'auth/login',
+  async (data: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const userJson = await SecureStore.getItemAsync('gearup_user');
-      const token = await SecureStore.getItemAsync('gearup_token');
-      if (userJson && token) {
-        return { user: JSON.parse(userJson), token };
-      }
-      return rejectWithValue('No session');
-    } catch {
-      return rejectWithValue('No session');
+      return await authService.login(data);
+    } catch (error: any) {
+      return rejectWithValue(error.message);
     }
   }
 );
+
+export const loadStoredUser = createAsyncThunk(
+  'auth/loadStoredUser',
+  async () => {
+    return await authService.getStoredUser();
+  }
+);
+
+export const logout = createAsyncThunk('auth/logout', async () => {
+  await authService.logout();
+});
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    logout: (state) => {
-      state.user = null;
-      state.token = null;
-      state.isAuthenticated = false;
-      state.error = null;
-      SecureStore.deleteItemAsync('gearup_token');
-      SecureStore.deleteItemAsync('gearup_user');
-    },
     clearError: (state) => {
       state.error = null;
     },
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
-    },
   },
   extraReducers: (builder) => {
-    builder.addCase(loginUser.pending, (state) => {
-      state.isLoading = true; state.error = null;
-    });
-    builder.addCase(loginUser.fulfilled, (state, action) => {
-      state.isLoading = false;
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-    });
-    builder.addCase(loginUser.rejected, (state, action) => {
-      state.isLoading = false;
-      state.error = action.payload as string;
-    });
-    builder.addCase(restoreSession.fulfilled, (state, action) => {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-    });
+    builder
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.token = action.payload.token;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.token = action.payload.token;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(loadStoredUser.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.user = action.payload;
+          state.token = action.payload.token;
+        }
+      })
+      .addCase(logout.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+      });
   },
 });
 
-export const { logout, clearError, setUser } = authSlice.actions;
+export const { clearError } = authSlice.actions;
 export default authSlice.reducer;
