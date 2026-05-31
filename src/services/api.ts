@@ -24,6 +24,16 @@ export const authHeaders = async () => {
   };
 };
 
+const parseResponse = async (response: Response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
 export const post = async (url: string, body: object, requiresAuth = false) => {
   const headers: any = { 'Content-Type': 'application/json' };
   if (requiresAuth) {
@@ -35,11 +45,11 @@ export const post = async (url: string, body: object, requiresAuth = false) => {
     headers,
     body: JSON.stringify(body),
   });
+  const data = await parseResponse(response);
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Request failed');
+    throw new Error(data?.message || data || 'Request failed');
   }
-  return response.json();
+  return data;
 };
 
 export const get = async (url: string, requiresAuth = true) => {
@@ -49,11 +59,11 @@ export const get = async (url: string, requiresAuth = true) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
   const response = await fetch(url, { method: 'GET', headers });
+  const data = await parseResponse(response);
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Request failed');
+    throw new Error(data?.message || data || 'Request failed');
   }
-  return response.json();
+  return data;
 };
 
 export const put = async (url: string, body: object) => {
@@ -63,11 +73,11 @@ export const put = async (url: string, body: object) => {
     headers,
     body: JSON.stringify(body),
   });
+  const data = await parseResponse(response);
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Request failed');
+    throw new Error(data?.message || data || 'Request failed');
   }
-  return response.json();
+  return data;
 };
 
 export const del = async (url: string) => {
