@@ -8,12 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { jobService } from '../../services/jobService';
+import { paymentService } from '../../services/paymentService';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
 export default function MechanicHomeScreen() {
   const { user } = useSelector((state: RootState) => state.auth);
   const [availableJobs, setAvailableJobs] = useState<any[]>([]);
   const [myJobs, setMyJobs] = useState<any[]>([]);
+  const [paidJobs, setPaidJobs] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -24,8 +26,29 @@ export default function MechanicHomeScreen() {
         jobService.getAvailableJobs(),
         jobService.getMyJobsAsMechanic(),
       ]);
-      setAvailableJobs(available);
-      setMyJobs(mine);
+      const sortByDate = (arr: any[]) => [...arr].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      const sortedAvailable = sortByDate(available);
+      const sortedMine = sortByDate(mine);
+      setAvailableJobs(sortedAvailable);
+      setMyJobs(sortedMine);
+
+      const completedJobs = sortedMine.filter((j: any) => j.status === 'COMPLETED');
+      const paidIds: number[] = [];
+      await Promise.all(
+        completedJobs.map(async (job: any) => {
+          try {
+            const payment = await paymentService.getPaymentByJob(job.id);
+            if (payment && payment.status === 'COMPLETED') {
+              paidIds.push(job.id);
+            }
+          } catch {
+            // no payment exists yet for this job — leave it unpaid
+          }
+        })
+      );
+      setPaidJobs(paidIds);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -46,6 +69,27 @@ export default function MechanicHomeScreen() {
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
+  };
+
+  const handleEditPrice = (job: any) => {
+    Alert.prompt(
+      'Edit Final Price',
+      `Current: GHS ${job.finalCost || 0}\nEnter new price (GHS)`,
+      async (newCost) => {
+        const parsed = parseFloat(newCost as string);
+        if (!newCost || isNaN(parsed) || parsed <= 0) {
+          Alert.alert('Invalid Amount', 'Please enter a valid positive number.');
+          return;
+        }
+        try {
+          await jobService.updateFinalCost(job.id, parsed);
+          fetchJobs();
+          Alert.alert('Success', 'Price updated!');
+        } catch (e: any) {
+          Alert.alert('Error', e.message);
+        }
+      }
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -144,8 +188,13 @@ export default function MechanicHomeScreen() {
                     style={styles.completeBtn}
                     onPress={() => {
                       Alert.prompt('Complete Job', 'Enter final cost (GHS)', async (cost) => {
+                        const parsed = parseFloat(cost as string);
+                        if (!cost || isNaN(parsed) || parsed <= 0) {
+                          Alert.alert('Invalid Amount', 'Please enter a valid positive number for the cost.');
+                          return;
+                        }
                         try {
-                          await jobService.completeJob(job.id, parseFloat(cost));
+                          await jobService.completeJob(job.id, parsed);
                           fetchJobs();
                           Alert.alert('Success', 'Job completed!');
                         } catch (e: any) {
@@ -156,6 +205,28 @@ export default function MechanicHomeScreen() {
                     <Text style={styles.completeBtnText}>Complete Job</Text>
                   </TouchableOpacity>
                 )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Completed but unpaid jobs — editable price */}
+        {myJobs.filter(j => j.status === 'COMPLETED' && !paidJobs.includes(j.id)).length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Awaiting Payment</Text>
+            {myJobs.filter(j => j.status === 'COMPLETED' && !paidJobs.includes(j.id)).map(job => (
+              <View key={job.id} style={styles.jobCard}>
+                <View style={styles.jobHeader}>
+                  <Text style={styles.jobTitle}>{job.title}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) + '20' }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>{job.status}</Text>
+                  </View>
+                </View>
+                <Text style={styles.costText}>Final: GHS {job.finalCost || 0}</Text>
+                <TouchableOpacity style={styles.editPriceBtn} onPress={() => handleEditPrice(job)}>
+                  <Ionicons name="pencil-outline" size={14} color="#b45309" />
+                  <Text style={styles.editPriceBtnText}>Edit Price</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -237,6 +308,8 @@ const styles = StyleSheet.create({
   startBtnText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#2563eb' },
   completeBtn: { marginTop: 8, padding: 10, backgroundColor: '#f0fdf4', borderRadius: RADIUS.md, alignItems: 'center' },
   completeBtnText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#10b981' },
+  editPriceBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4, padding: 10, backgroundColor: '#fffbeb', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fde68a' },
+  editPriceBtnText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#b45309' },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: '#9ca3af', marginTop: 12 },
   emptySubText: { fontSize: FONT_SIZES.sm, color: '#d1d5db', marginTop: 4 },

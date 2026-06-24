@@ -96,6 +96,22 @@ public class JobService {
         return mapToDto(jobRepository.save(job));
     }
 
+    public JobDto updateFinalCost(Long jobId, Long mechanicId, Double newCost) {
+    Job job = jobRepository.findById(jobId)
+            .orElseThrow(() -> new RuntimeException("Job not found"));
+
+    if (!job.getMechanicId().equals(mechanicId)) {
+        throw new RuntimeException("Unauthorized");
+    }
+
+    if (job.getStatus() != JobStatus.COMPLETED) {
+        throw new RuntimeException("Can only edit cost on completed jobs");
+    }
+
+    job.setFinalCost(newCost);
+    return mapToDto(jobRepository.save(job));
+}
+
     public JobDto cancelJob(Long jobId, Long ownerId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));

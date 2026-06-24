@@ -16,10 +16,13 @@ export default function OwnerHomeScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchJobs = async () => {
+ const fetchJobs = async () => {
     try {
       const data = await jobService.getMyJobsAsOwner();
-      setJobs(data);
+      const sorted = [...data].sort((a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setJobs(sorted);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {

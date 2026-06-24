@@ -60,6 +60,15 @@ public class JobController {
         return ResponseEntity.ok(jobService.acceptJob(id, mechanicId));
     }
 
+    @PutMapping("/{id}/cost")
+public ResponseEntity<JobDto> updateFinalCost(
+        @RequestHeader("Authorization") String authHeader,
+        @PathVariable Long id,
+        @RequestBody Map<String, Double> body) {
+    Long mechanicId = extractUserId(authHeader);
+    return ResponseEntity.ok(jobService.updateFinalCost(id, mechanicId, body.get("finalCost")));
+}
+
     @PutMapping("/{id}/start")
     public ResponseEntity<JobDto> startJob(
             @RequestHeader("Authorization") String authHeader,

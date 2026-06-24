@@ -42,7 +42,12 @@ export const jobService = {
     return await put(`${API.JOB}/api/jobs/${jobId}/complete`, { finalCost });
   },
 
+  updateFinalCost: async (jobId: number, finalCost: number) => {
+    return await put(`${API.JOB}/api/jobs/${jobId}/cost`, { finalCost });
+  },
+
   cancelJob: async (jobId: number) => {
     return await put(`${API.JOB}/api/jobs/${jobId}/cancel`, {});
   },
+  
 };
