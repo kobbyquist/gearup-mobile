@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { loadStoredUser } from '../store/slices/authSlice';
-import { ActivityIndicator, View } from 'react-native';
 
+import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import OtpScreen from '../screens/auth/OtpScreen';
@@ -13,21 +13,21 @@ import OwnerTabNavigator from './OwnerTabNavigator';
 import MechanicTabNavigator from './MechanicTabNavigator';
 
 const Stack = createNativeStackNavigator();
+const SPLASH_DURATION = 1800;
 
 export default function Navigation() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     dispatch(loadStoredUser());
+    const timer = setTimeout(() => setShowSplash(false), SPLASH_DURATION);
+    return () => clearTimeout(timer);
   }, []);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1b4332" />
-      </View>
-    );
+  if (showSplash) {
+    return <SplashScreen />;
   }
 
   return (
