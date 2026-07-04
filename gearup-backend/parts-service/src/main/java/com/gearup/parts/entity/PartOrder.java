@@ -37,6 +37,11 @@ public class PartOrder {
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
 
+    // Price negotiation — mirrors Job's proposedCost/proposedByMechanicId pattern.
+    // "price" itself is the agreed price (starts as the listing price at order creation).
+    private Double proposedPrice;
+    private Long proposedByUserId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -46,6 +51,6 @@ public class PartOrder {
     }
 
     public enum OrderStatus {
-        PENDING, CONFIRMED, CANCELLED, COMPLETED
+        PENDING, ACCEPTED, DECLINED, CANCELLED, COMPLETED
     }
 }
