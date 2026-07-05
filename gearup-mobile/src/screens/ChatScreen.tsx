@@ -2,22 +2,25 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, StatusBar, ActivityIndicator, KeyboardAvoidingView,
-  Platform, Alert, Animated, Modal
+  Platform, Alert, Animated, Modal, Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
+import {
+  useAudioRecorder, useAudioPlayer, useAudioPlayerStatus,
+  AudioModule, RecordingPresets, setAudioModeAsync,
+} from 'expo-audio';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { messageService, Message, JobCardMetadata } from '../services/messageService';
+import { messageService, Message, JobCardMetadata, AttachmentMetadata } from '../services/messageService';
 import { jobService } from '../services/jobService';
 import { paymentService } from '../services/paymentService';
 import { reviewService } from '../services/reviewService';
 import ConfirmDialog from '../components/ConfirmDialog';
-import WalletPaymentSheet from '../components/WalletPaymentSheet';
 import { AppAlertCard } from '../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../constants';
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'PENDING': return '#f59e0b';
@@ -35,7 +38,11 @@ const formatDate = (dateStr: string | null | undefined) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
     ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
-
+const formatDuration = (totalSeconds: number): string => {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
 // ─── AnimatedActionButton: press-scale wrapper used for all job card action buttons ───
 function AnimatedActionButton({ style, textStyle, icon, iconColor, label, onPress, disabled, loading }: {
   style: any;
@@ -732,7 +739,82 @@ function JobCardBubble({
     </View>
   );
 }
+// ─── AudioMessageBubble: playback bubble for voice note messages ───
+function AudioMessageBubble({ url, durationSeconds, isMine, onLongPress }: {
+  url: string;
+  durationSeconds?: number;
+  isMine: boolean;
+  onLongPress: () => void;
+}) {
+  const player = useAudioPlayer(url);
+  const status = useAudioPlayerStatus(player);
+  const knownDuration = status.duration || durationSeconds || 0;
+  const displaySeconds = status.currentTime > 0 ? status.currentTime : knownDuration;
+  const progress = knownDuration > 0 ? Math.min(1, status.currentTime / knownDuration) : 0;
 
+  const handlePress = () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    // expo-audio doesn't auto-reset position after finishing playback, unlike expo-av —
+    // seek back to start manually if we're at (or past) the end before replaying.
+    if (knownDuration > 0 && status.currentTime >= knownDuration - 0.15) {
+      player.seekTo(0);
+    }
+    player.play();
+  };
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={handlePress}
+      onLongPress={onLongPress}
+      style={[styles.audioBubble, isMine ? styles.audioBubbleMine : styles.audioBubbleTheirs]}>
+      <Ionicons
+        name={status.playing ? 'pause-circle' : 'play-circle'}
+        size={34}
+        color={isMine ? '#fff' : '#1b4332'}
+      />
+      <View style={styles.audioProgressTrack}>
+        <View style={[styles.audioProgressFill, { width: `${progress * 100}%`, backgroundColor: isMine ? '#fff' : '#1b4332' }]} />
+      </View>
+      <Text style={[styles.audioDurationText, { color: isMine ? '#fff' : '#1b1b1b' }]}>
+        {formatDuration(displaySeconds)}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+// ─── AudioPreviewPlayer: playback control shown in the send-confirmation modal ───
+function AudioPreviewPlayer({ uri, accentColor }: { uri: string; accentColor: string }) {
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  const duration = status.duration || 0;
+  const progress = duration > 0 ? Math.min(1, status.currentTime / duration) : 0;
+
+  const handlePress = () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    if (duration > 0 && status.currentTime >= duration - 0.15) {
+      player.seekTo(0);
+    }
+    player.play();
+  };
+
+  return (
+    <View style={styles.audioPreviewPlayerRow}>
+      <TouchableOpacity onPress={handlePress}>
+        <Ionicons name={status.playing ? 'pause-circle' : 'play-circle'} size={48} color={accentColor} />
+      </TouchableOpacity>
+      <View style={styles.audioProgressTrack}>
+        <View style={[styles.audioProgressFill, { width: `${progress * 100}%`, backgroundColor: accentColor }]} />
+      </View>
+      <Text style={styles.audioPreviewDurationText}>{formatDuration(status.currentTime || duration)}</Text>
+    </View>
+  );
+}
 export default function ChatScreen({ route, navigation }: any) {
   const { job, otherUserId, otherUserName } = route.params;
   const { user } = useSelector((state: RootState) => state.auth);
@@ -740,9 +822,38 @@ export default function ChatScreen({ route, navigation }: any) {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+const [attachMenuVisible, setAttachMenuVisible] = useState(false);
+  const pendingAttachActionRef = useRef<(() => void) | null>(null);
+
+  // Modal's onDismiss only fires on iOS, so Android needs its own path to trigger
+  // the pending action (camera/library/recording) after the attach menu closes.
+  // Android doesn't share iOS's native-modal-presentation conflict, so a short
+  // delay here is reliable — unlike on iOS, where a fixed delay alone wasn't enough.
+  const triggerAttachAction = (action: () => void) => {
+    pendingAttachActionRef.current = action;
+    setAttachMenuVisible(false);
+    if (Platform.OS === 'android') {
+      setTimeout(() => {
+        const pending = pendingAttachActionRef.current;
+        pendingAttachActionRef.current = null;
+        if (pending) pending();
+      }, 300);
+    }
+  };
+  const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+  const [sendingPreview, setSendingPreview] = useState(false);
+ const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pendingAudioUri, setPendingAudioUri] = useState<string | null>(null);
+  const [pendingAudioDuration, setPendingAudioDuration] = useState(0);
+  const [sendingAudio, setSendingAudio] = useState(false);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const flatListRef = useRef<FlatList>(null);
   const channelRef = useRef<any>(null);
-
   const [reviewTarget, setReviewTarget] = useState<{ jobId: number; mechanicId: number } | null>(null);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
@@ -766,6 +877,7 @@ export default function ChatScreen({ route, navigation }: any) {
     try {
       const data = await messageService.getMessages(job.id);
       setMessages(data);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
       await messageService.markAsRead(job.id, myId);
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -793,8 +905,15 @@ export default function ChatScreen({ route, navigation }: any) {
         return;
       }
       setMessages(prev => {
-        const exists = prev.find(m => m.id === message.id);
-        if (exists) return prev;
+        const idx = prev.findIndex(m => m.id === message.id);
+        if (idx !== -1) {
+          // An update to an existing row (e.g. is_read flipping to true) — replace
+          // it in place rather than silently dropping it, which is what the old
+          // "already exists, do nothing" logic did.
+          const updated = [...prev];
+          updated[idx] = message;
+          return updated;
+        }
         return [...prev, message];
       });
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -821,7 +940,132 @@ export default function ChatScreen({ route, navigation }: any) {
       setSending(false);
     }
   };
+const pickFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo access to send an image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    setPendingImageUri(result.assets[0].uri);
+  };
 
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow camera access to take a photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    setPendingImageUri(result.assets[0].uri);
+  };
+
+  const cancelImagePreview = () => setPendingImageUri(null);
+
+  const confirmSendImage = async () => {
+    if (!pendingImageUri) return;
+    setSendingPreview(true);
+    try {
+      const url = await messageService.uploadAttachment(pendingImageUri, 'image');
+      const sent = await messageService.sendAttachmentMessage(job.id, myId, otherUserId, url, 'image');
+      setMessages(prev => {
+        const exists = prev.find(m => m.id === sent.id);
+        if (exists) return prev;
+        return [...prev, sent];
+      });
+      flatListRef.current?.scrollToEnd({ animated: true });
+      setPendingImageUri(null);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not send photo. Please try again.');
+    } finally {
+      setSendingPreview(false);
+    }
+  };
+  const startRecording = async () => {
+    const permission = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow microphone access to record a voice note.');
+      return;
+    }
+    await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+    await audioRecorder.prepareToRecordAsync();
+    audioRecorder.record();
+    setIsRecording(true);
+    setRecordingSeconds(0);
+    recordingIntervalRef.current = setInterval(() => {
+      setRecordingSeconds(prev => prev + 1);
+    }, 1000);
+  };
+  const cancelRecording = async () => {
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    recordingIntervalRef.current = null;
+    try {
+      await audioRecorder.stop();
+    } catch {
+      // already stopped or never started — safe to ignore
+    }
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
+  const stopAndPreviewRecording = async () => {
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    recordingIntervalRef.current = null;
+    const finishedSeconds = recordingSeconds;
+    await audioRecorder.stop();
+    setIsRecording(false);
+    const uri = audioRecorder.uri;
+    if (uri) {
+      setPendingAudioUri(uri);
+      setPendingAudioDuration(finishedSeconds);
+    }
+  };
+  const cancelAudioPreview = () => {
+    setPendingAudioUri(null);
+    setPendingAudioDuration(0);
+  };
+  const confirmSendAudio = async () => {
+    if (!pendingAudioUri) return;
+    setSendingAudio(true);
+    try {
+      const url = await messageService.uploadAttachment(pendingAudioUri, 'audio');
+      const sent = await messageService.sendAttachmentMessage(
+        job.id, myId, otherUserId, url, 'audio', { durationSeconds: pendingAudioDuration }
+      );
+      setMessages(prev => {
+        const exists = prev.find(m => m.id === sent.id);
+        if (exists) return prev;
+        return [...prev, sent];
+      });
+      flatListRef.current?.scrollToEnd({ animated: true });
+      setPendingAudioUri(null);
+      setPendingAudioDuration(0);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not send voice note. Please try again.');
+    } finally {
+      setSendingAudio(false);
+    }
+  };
+  const handleDeleteMessage = async () => {
+    if (!deleteTarget) return;
+    setDeletingMessage(true);
+    try {
+      await messageService.deleteMessage(deleteTarget);
+      setMessages(prev => prev.filter(m => m.id !== deleteTarget));
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not delete this message.');
+    } finally {
+      setDeletingMessage(false);
+      setDeleteTarget(null);
+    }
+  };
   const handleSubmitReview = async () => {
     if (!reviewTarget || selectedRating === 0) return;
     setSubmittingReview(true);
@@ -891,7 +1135,53 @@ export default function ChatScreen({ route, navigation }: any) {
         </>
       );
     }
-
+    if (item.message_type === 'image') {
+      return (
+        <>
+          {showDate && (
+            <View style={styles.dateSeparator}>
+              <Text style={styles.dateSeparatorText}>
+                {new Date(item.created_at).toLocaleDateString('en-GB', {
+                  weekday: 'short', day: '2-digit', month: 'short'
+                })}
+              </Text>
+            </View>
+          )}
+          <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setViewerImageUrl(item.content)}
+              onLongPress={() => isMine && setDeleteTarget(item.id)}>
+              <Image source={{ uri: item.content }} style={styles.imageBubble} />
+            </TouchableOpacity>
+          </View>
+        </>
+      );
+    }
+    if (item.message_type === 'audio') {
+      const durationSeconds = (item.metadata as AttachmentMetadata | null)?.durationSeconds;
+      return (
+        <>
+          {showDate && (
+            <View style={styles.dateSeparator}>
+              <Text style={styles.dateSeparatorText}>
+                {new Date(item.created_at).toLocaleDateString('en-GB', {
+                  weekday: 'short', day: '2-digit', month: 'short'
+                })}
+              </Text>
+            </View>
+          )}
+          <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
+            <AudioMessageBubble
+              url={item.content}
+              durationSeconds={durationSeconds}
+              isMine={isMine}
+              onLongPress={() => isMine && setDeleteTarget(item.id)}
+            />
+          </View>
+        </>
+      );
+    }
     return (
       <>
         {showDate && (
@@ -904,7 +1194,10 @@ export default function ChatScreen({ route, navigation }: any) {
           </View>
         )}
         <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
-          <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onLongPress={() => isMine && setDeleteTarget(item.id)}
+            style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
             <Text style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
               {item.content}
             </Text>
@@ -914,12 +1207,11 @@ export default function ChatScreen({ route, navigation }: any) {
                 <Text> {item.is_read ? '✓✓' : '✓'}</Text>
               )}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </>
     );
   };
-
   const headerColor = isOwner
     ? ['#1b4332', '#2d6a4f']
     : ['#b45309', '#78350f'];
@@ -947,8 +1239,7 @@ export default function ChatScreen({ route, navigation }: any) {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={0}>
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -965,34 +1256,167 @@ export default function ChatScreen({ route, navigation }: any) {
             }
           />
 
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type a message..."
-              placeholderTextColor="#9ca3af"
-              multiline
-              maxLength={500}
-              autoCorrect={true}
-              spellCheck={true}
-              keyboardType="default"
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, !newMessage.trim() && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={!newMessage.trim() || sending}>
-              <LinearGradient
-                colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#b45309', '#78350f']}
-                style={styles.sendBtnGradient}>
-                {sending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="send" size={18} color="#fff" />
-                )}
-              </LinearGradient>
+          {isRecording ? (
+            <View style={styles.recordingRow}>
+              <TouchableOpacity style={styles.recordingCancelBtn} onPress={cancelRecording}>
+                <Ionicons name="trash-outline" size={22} color="#dc2626" />
+              </TouchableOpacity>
+              <View style={styles.recordingIndicator}>
+                <View style={styles.recordingDot} />
+                <Text style={styles.recordingTimeText}>{formatDuration(recordingSeconds)}</Text>
+                <Text style={styles.recordingHintText}>Recording…</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.recordingStopBtn, { backgroundColor: accentColor }]}
+                onPress={stopAndPreviewRecording}>
+                <Ionicons name="checkmark" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.inputRow}>
+              <TouchableOpacity style={styles.attachBtn} onPress={() => setAttachMenuVisible(true)}>
+                <Ionicons name="add" size={26} color={accentColor} />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Type a message..."
+                placeholderTextColor="#9ca3af"
+                multiline
+                maxLength={500}
+                autoCorrect={true}
+                spellCheck={true}
+                keyboardType="default"
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, !newMessage.trim() && styles.sendBtnDisabled]}
+                onPress={handleSend}
+                disabled={!newMessage.trim() || sending}>
+                <LinearGradient
+                  colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#b45309', '#78350f']}
+                  style={styles.sendBtnGradient}>
+                  {sending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="send" size={18} color="#fff" />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Modal
+            visible={attachMenuVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setAttachMenuVisible(false)}
+            onDismiss={() => {
+              // iOS fires this only after the modal has genuinely finished closing —
+              // that's the earliest safe moment to present another native UI element
+              // like the image picker, avoiding the silent-failure issue we hit
+              // when triggering it directly from inside the modal.
+              const action = pendingAttachActionRef.current;
+              pendingAttachActionRef.current = null;
+              if (action) action();
+            }}>
+            <TouchableOpacity style={styles.attachMenuOverlay} activeOpacity={1} onPress={() => setAttachMenuVisible(false)}>
+              <View style={styles.attachMenu}>
+                <TouchableOpacity style={styles.attachMenuOption} onPress={() => triggerAttachAction(takePhoto)}>
+                  <View style={[styles.attachMenuIconWrap, { backgroundColor: '#f0fdf4' }]}>
+                    <Ionicons name="camera" size={20} color="#10b981" />
+                  </View>
+                  <Text style={styles.attachMenuText}>Take Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.attachMenuOption} onPress={() => triggerAttachAction(pickFromLibrary)}>
+                  <View style={[styles.attachMenuIconWrap, { backgroundColor: '#eff6ff' }]}>
+                    <Ionicons name="image" size={20} color="#2563eb" />
+                  </View>
+                  <Text style={styles.attachMenuText}>Choose Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.attachMenuOption} onPress={() => triggerAttachAction(startRecording)}>
+                  <View style={[styles.attachMenuIconWrap, { backgroundColor: '#fef2f2' }]}>
+                    <Ionicons name="mic" size={20} color="#dc2626" />
+                  </View>
+                  <Text style={styles.attachMenuText}>Voice Note</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-          </View>
+          </Modal>
+
+          <Modal visible={!!viewerImageUrl} transparent animationType="fade" onRequestClose={() => setViewerImageUrl(null)}>
+            <TouchableOpacity style={styles.imageViewerOverlay} activeOpacity={1} onPress={() => setViewerImageUrl(null)}>
+              {viewerImageUrl && (
+                <Image source={{ uri: viewerImageUrl }} style={styles.imageViewerFull} resizeMode="contain" />
+              )}
+            </TouchableOpacity>
+          </Modal>
+
+          <Modal visible={!!pendingImageUri} transparent animationType="fade" onRequestClose={cancelImagePreview}>
+            <View style={styles.imageViewerOverlay}>
+              {pendingImageUri && (
+                <Image source={{ uri: pendingImageUri }} style={styles.imageViewerFull} resizeMode="contain" />
+              )}
+              <View style={styles.previewActionsRow}>
+                <TouchableOpacity style={styles.previewCancelBtn} onPress={cancelImagePreview} disabled={sendingPreview}>
+                  <Ionicons name="close" size={22} color="#fff" />
+                  <Text style={styles.previewBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.previewSendBtn, { backgroundColor: accentColor }]}
+                  onPress={confirmSendImage}
+                  disabled={sendingPreview}>
+                  {sendingPreview ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="send" size={20} color="#fff" />
+                      <Text style={styles.previewBtnText}>Send</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <ConfirmDialog
+            visible={!!deleteTarget}
+            icon="trash-outline"
+            title="Delete Message"
+            message="This will permanently delete this message for everyone in the conversation."
+            confirmText="Delete"
+            destructive
+            onConfirm={handleDeleteMessage}
+            onCancel={() => setDeleteTarget(null)}
+          />
+
+          <Modal visible={!!pendingAudioUri} transparent animationType="fade" onRequestClose={cancelAudioPreview}>
+            <View style={styles.audioPreviewOverlay}>
+              <View style={styles.audioPreviewCard}>
+                <Text style={styles.audioPreviewTitle}>Voice Note</Text>
+                {pendingAudioUri && <AudioPreviewPlayer uri={pendingAudioUri} accentColor={accentColor} />}
+                <View style={styles.audioPreviewActionsRow}>
+                  <TouchableOpacity style={styles.audioPreviewDiscardBtn} onPress={cancelAudioPreview} disabled={sendingAudio}>
+                    <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                    <Text style={styles.audioPreviewDiscardText}>Discard</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.audioPreviewSendBtn, { backgroundColor: accentColor }]}
+                    onPress={confirmSendAudio}
+                    disabled={sendingAudio}>
+                    {sendingAudio ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="send" size={18} color="#fff" />
+                        <Text style={styles.audioPreviewSendText}>Send</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </KeyboardAvoidingView>
       )}
 
@@ -1077,6 +1501,19 @@ const styles = StyleSheet.create({
   emptyChatText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: '#9ca3af' },
   emptyChatSubText: { fontSize: FONT_SIZES.sm, color: '#d1d5db' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f3f4f6', gap: SPACING.sm },
+  attachBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  attachMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' },
+  attachMenu: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingVertical: SPACING.md, paddingBottom: 40 },
+  attachMenuOption: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  attachMenuIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  attachMenuText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#1b1b1b' },
+  imageBubble: { width: 220, height: 220, borderRadius: 16, backgroundColor: '#f3f4f6' },
+  imageViewerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+imageViewerFull: { width: '100%', height: '80%' },
+  previewActionsRow: { position: 'absolute', bottom: 50, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: SPACING.xl },
+  previewCancelBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 22, paddingVertical: 12, borderRadius: RADIUS.full },
+  previewSendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 26, paddingVertical: 12, borderRadius: RADIUS.full },
+  previewBtnText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#fff' },
   input: { flex: 1, backgroundColor: '#f9fafb', borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 16, paddingVertical: 10, fontSize: FONT_SIZES.md, color: '#1b1b1b', maxHeight: 100 },
   sendBtn: { borderRadius: 22, overflow: 'hidden' },
   sendBtnDisabled: { opacity: 0.5 },
@@ -1137,4 +1574,27 @@ const styles = StyleSheet.create({
   starsRow: { flexDirection: 'row', gap: 6, marginVertical: SPACING.md },
   reviewSuccessTitle: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b1b1b', marginTop: 8, marginBottom: 2 },
   reviewSuccessSubtitle: { fontSize: FONT_SIZES.sm, color: '#6b7280' },
+  recordingRow: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f3f4f6', gap: SPACING.sm },
+  recordingCancelBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fef2f2', justifyContent: 'center', alignItems: 'center' },
+  recordingIndicator: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#dc2626' },
+  recordingTimeText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b1b1b' },
+  recordingHintText: { fontSize: FONT_SIZES.sm, color: '#9ca3af' },
+  recordingStopBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  audioBubble: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 10, minWidth: 200, maxWidth: '75%' },
+  audioBubbleMine: { backgroundColor: '#1b4332', borderBottomRightRadius: 4 },
+  audioBubbleTheirs: { backgroundColor: '#ffffff', borderBottomLeftRadius: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  audioProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(128,128,128,0.25)', overflow: 'hidden' },
+  audioProgressFill: { height: '100%', borderRadius: 2 },
+  audioDurationText: { fontSize: FONT_SIZES.xs, fontWeight: '600', minWidth: 34, textAlign: 'right' },
+  audioPreviewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  audioPreviewCard: { backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: SPACING.lg, width: '100%' },
+  audioPreviewTitle: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b1b1b', textAlign: 'center', marginBottom: SPACING.md },
+  audioPreviewPlayerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+  audioPreviewDurationText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#374151', minWidth: 40, textAlign: 'right' },
+  audioPreviewActionsRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.lg },
+  audioPreviewDiscardBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: RADIUS.md, backgroundColor: '#fef2f2' },
+  audioPreviewDiscardText: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#dc2626' },
+  audioPreviewSendBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: RADIUS.md },
+  audioPreviewSendText: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#fff' },
 });

@@ -22,6 +22,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
@@ -44,7 +45,8 @@
         {
           "photosPermission": "GearUp needs access to your photos so you can add pictures of your parts listings."
         }
-      ]
+      ],
+      "expo-audio"
     ]
   }
 }

@@ -1,3 +1,4 @@
 node_modules
 .expo/
 gearup-backend/payment-service/payment-log.txt
+gearup-backend/parts-service/uploads/

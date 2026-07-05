@@ -80,7 +80,14 @@ export default function OwnerMessagesScreen({ navigation }: any) {
       Alert.alert('Error', 'Could not delete conversation. Please try again.');
     }
   };
-
+const getPreviewText = (convo: any): string => {
+    const isMine = convo.sender_id === user?.userId;
+    let text: string;
+    if (convo.message_type === 'image') text = '📷 Photo';
+    else if (convo.message_type === 'audio') text = '🎤 Voice message';
+    else text = convo.content;
+    return isMine ? `You: ${text}` : text;
+  };
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -147,7 +154,7 @@ export default function OwnerMessagesScreen({ navigation }: any) {
                     <LinearGradient colors={['#1b4332', '#2d6a4f']} style={styles.avatar}>
                       <Text style={styles.avatarText}>{convo.otherUserName?.[0]?.toUpperCase()}</Text>
                     </LinearGradient>
-                    {!convo.is_read && convo.receiver_id === user?.userId && (
+                    {!convo.is_read && convo.sender_id !== user?.userId && (
                       <View style={styles.unreadDot} />
                     )}
                   </View>
@@ -157,9 +164,14 @@ export default function OwnerMessagesScreen({ navigation }: any) {
                       <Text style={styles.convoTime}>{formatTime(convo.created_at)}</Text>
                     </View>
                     <Text style={styles.convoJob} numberOfLines={1}>{convo.job?.title}</Text>
-                    <Text style={styles.convoMessage} numberOfLines={1}>{convo.content}</Text>
+                    <View style={styles.convoMessageRow}>
+                      {convo.sender_id === user?.userId && (
+                        <Text style={styles.convoReceipt}>{convo.is_read ? '✓✓' : '✓'}</Text>
+                      )}
+                      <Text style={styles.convoMessage} numberOfLines={1}>{getPreviewText(convo)}</Text>
+                    </View>
                   </View>
-                  {!convo.is_read && convo.receiver_id === user?.userId && (
+                  {!convo.is_read && convo.sender_id !== user?.userId && (
                     <View style={styles.unreadBadge}>
                       <Text style={styles.unreadCount}>1</Text>
                     </View>
@@ -207,7 +219,9 @@ const styles = StyleSheet.create({
   convoName: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b1b1b' },
   convoTime: { fontSize: FONT_SIZES.xs, color: '#9ca3af' },
   convoJob: { fontSize: FONT_SIZES.xs, color: '#1b4332', fontWeight: '600', marginBottom: 2 },
-  convoMessage: { fontSize: FONT_SIZES.sm, color: '#6b7280' },
+convoMessageRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  convoReceipt: { fontSize: FONT_SIZES.sm, color: '#1b4332', fontWeight: '600' },
+  convoMessage: { fontSize: FONT_SIZES.sm, color: '#6b7280', flexShrink: 1 },
   unreadBadge: { backgroundColor: '#1b4332', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginLeft: SPACING.sm },
   unreadCount: { fontSize: 11, fontWeight: '700', color: '#fff' },
   emptyState: { alignItems: 'center', paddingVertical: 80, paddingHorizontal: SPACING.xl, gap: 8 },

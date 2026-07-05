@@ -4,6 +4,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
 import OwnerHomeScreen from '../screens/owner/OwnerHomeScreen';
 import OwnerSearchScreen from '../screens/owner/OwnerSearchScreen';
 import OwnerJobsScreen from '../screens/owner/OwnerJobsScreen';
@@ -31,9 +34,8 @@ const LABELS: Record<string, string> = {
 const ACTIVE_COLOR = '#1b4332';
 const INACTIVE_COLOR = '#9ca3af';
 
-function TabButton({ routeName, focused, onPress }: { routeName: string; focused: boolean; onPress: () => void }) {
+function TabButton({ routeName, focused, onPress, showDot }: { routeName: string; focused: boolean; onPress: () => void; showDot?: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
-
   useEffect(() => {
     if (focused) {
       Animated.sequence([
@@ -42,23 +44,24 @@ function TabButton({ routeName, focused, onPress }: { routeName: string; focused
       ]).start();
     }
   }, [focused]);
-
   const [filled, outline] = ICONS[routeName];
   const color = focused ? ACTIVE_COLOR : INACTIVE_COLOR;
-
   return (
     <TouchableOpacity style={styles.tabBtn} onPress={onPress} activeOpacity={0.7}>
       <Animated.View style={{ transform: [{ scale }] }}>
-        <Ionicons name={(focused ? filled : outline) as any} size={22} color={color} />
+        <View>
+          <Ionicons name={(focused ? filled : outline) as any} size={22} color={color} />
+          {showDot && <View style={styles.tabDot} />}
+        </View>
       </Animated.View>
       <Text style={[styles.tabLabel, { color }]}>{LABELS[routeName]}</Text>
     </TouchableOpacity>
   );
 }
-
 function FloatingTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
-
+  const { user } = useSelector((state: RootState) => state.auth);
+  const unreadCount = useUnreadMessagesCount(user?.userId);
   return (
     <View style={[styles.wrapper, { bottom: Math.max(insets.bottom, 16) }]}>
       <View style={styles.shadowWrapper}>
@@ -71,7 +74,13 @@ function FloatingTabBar({ state, navigation }: any) {
               if (!focused) navigation.navigate(route.name);
             };
             return (
-              <TabButton key={route.key} routeName={route.name} focused={focused} onPress={onPress} />
+              <TabButton
+                key={route.key}
+                routeName={route.name}
+                focused={focused}
+                onPress={onPress}
+                showDot={route.name === 'Messages' && unreadCount > 0}
+              />
             );
           })}
         </View>
@@ -80,7 +89,6 @@ function FloatingTabBar({ state, navigation }: any) {
     </View>
   );
 }
-
 export default function OwnerTabNavigator() {
   return (
     <Tab.Navigator
@@ -95,7 +103,6 @@ export default function OwnerTabNavigator() {
     </Tab.Navigator>
   );
 }
-
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
@@ -138,5 +145,16 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10.5,
     fontWeight: '600',
+  },
+  tabDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
 });

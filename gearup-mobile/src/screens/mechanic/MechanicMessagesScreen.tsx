@@ -30,7 +30,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
         messageService.getConversations(myId),
         jobService.getMyJobsAsMechanic(),
       ]);
-
       const enriched = await Promise.all(
         msgs.map(async (msg: any) => {
           const isPartOrder = msg.job_id < 0;
@@ -46,7 +45,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
           return { ...msg, job, otherUserId, otherUserName };
         })
       );
-
       setConversations(enriched.filter(c => c.job));
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -91,6 +89,15 @@ export default function MechanicMessagesScreen({ navigation }: any) {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
   };
 
+  const getPreviewText = (convo: any): string => {
+    const isMine = convo.sender_id === user?.userId;
+    let text: string;
+    if (convo.message_type === 'image') text = '📷 Photo';
+    else if (convo.message_type === 'audio') text = '🎤 Voice message';
+    else text = convo.content;
+    return isMine ? `You: ${text}` : text;
+  };
+
   const renderRightActions = (convo: any, progress: Animated.AnimatedInterpolation<number>) => {
     const scale = progress.interpolate({
       inputRange: [0, 1],
@@ -113,7 +120,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
       <LinearGradient colors={['#b45309', '#78350f']} style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
       </LinearGradient>
-
       {loading ? (
         <ActivityIndicator style={{ flex: 1 }} color="#b45309" />
       ) : (
@@ -157,9 +163,14 @@ export default function MechanicMessagesScreen({ navigation }: any) {
                       <Text style={styles.convoTime}>{formatTime(convo.created_at)}</Text>
                     </View>
                     <Text style={styles.convoJob} numberOfLines={1}>{convo.job?.title}</Text>
-                    <Text style={styles.convoMessage} numberOfLines={1}>{convo.content}</Text>
+                    <View style={styles.convoMessageRow}>
+                      {convo.sender_id === user?.userId && (
+                        <Text style={styles.convoReceipt}>{convo.is_read ? '✓✓' : '✓'}</Text>
+                      )}
+                      <Text style={styles.convoMessage} numberOfLines={1}>{getPreviewText(convo)}</Text>
+                    </View>
                   </View>
-                  {!convo.is_read && convo.receiver_id === user?.userId && (
+                  {!convo.is_read && convo.sender_id !== user?.userId && (
                     <View style={styles.unreadBadge}>
                       <Text style={styles.unreadCount}>1</Text>
                     </View>
@@ -170,7 +181,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
           )}
         </ScrollView>
       )}
-
       <ConfirmDialog
         visible={!!deleteTarget}
         icon="trash-outline"
@@ -185,7 +195,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: { paddingTop: 60, paddingBottom: SPACING.lg, paddingHorizontal: SPACING.lg },
@@ -200,7 +209,9 @@ const styles = StyleSheet.create({
   convoName: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b1b1b' },
   convoTime: { fontSize: FONT_SIZES.xs, color: '#9ca3af' },
   convoJob: { fontSize: FONT_SIZES.xs, color: '#b45309', fontWeight: '600', marginBottom: 2 },
-  convoMessage: { fontSize: FONT_SIZES.sm, color: '#6b7280' },
+  convoMessageRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  convoReceipt: { fontSize: FONT_SIZES.sm, color: '#b45309', fontWeight: '600' },
+  convoMessage: { fontSize: FONT_SIZES.sm, color: '#6b7280', flexShrink: 1 },
   unreadBadge: { backgroundColor: '#b45309', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginLeft: SPACING.sm },
   unreadCount: { fontSize: 11, fontWeight: '700', color: '#fff' },
   emptyState: { alignItems: 'center', paddingVertical: 80, paddingHorizontal: SPACING.xl, gap: 8 },

@@ -1,7 +1,11 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
 import { COLORS } from '../constants';
 import MechanicHomeScreen from '../screens/mechanic/MechanicHomeScreen';
 import MechanicJobsScreen from '../screens/mechanic/MechanicJobsScreen';
@@ -14,6 +18,8 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MechanicTabs() {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const unreadCount = useUnreadMessagesCount(user?.userId);
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -35,11 +41,14 @@ function MechanicTabs() {
             Profile: focused ? 'person' : 'person-outline',
           };
           return (
-            <Ionicons
-              name={icons[route.name] as any}
-              size={size}
-              color={color}
-            />
+            <View>
+              <Ionicons
+                name={icons[route.name] as any}
+                size={size}
+                color={color}
+              />
+              {route.name === 'Messages' && unreadCount > 0 && <View style={mechanicTabStyles.tabDot} />}
+            </View>
           );
         },
       })}>
@@ -60,3 +69,17 @@ export default function MechanicTabNavigator() {
     </Stack.Navigator>
   );
 }
+
+const mechanicTabStyles = StyleSheet.create({
+  tabDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+});

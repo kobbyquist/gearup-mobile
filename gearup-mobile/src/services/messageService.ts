@@ -1,17 +1,18 @@
 import { supabase } from './supabaseClient';
-
 export interface Message {
   id: string;
   job_id: number;
   sender_id: number;
   receiver_id: number;
   content: string;
-  message_type: 'text' | 'job_card';
-  metadata: JobCardMetadata | null;
+  message_type: 'text' | 'job_card' | 'image' | 'audio';
+  metadata: JobCardMetadata | AttachmentMetadata | null;
   created_at: string;
   is_read: boolean;
 }
-
+export interface AttachmentMetadata {
+  durationSeconds?: number;
+}
 export interface JobCardMetadata {
   jobId: number;
   title: string;
@@ -49,7 +50,7 @@ const buildJobCardSummary = (meta: JobCardMetadata): string => {
       return `📋 Job update: ${meta.title}`;
   }
 };
-
+const ATTACHMENTS_BUCKET = 'chat-attachments';
 export const messageService = {
   sendMessage: async (jobId: number, senderId: number, receiverId: number, content: string): Promise<Message> => {
     const { data, error } = await supabase
@@ -57,11 +58,52 @@ export const messageService = {
       .insert([{ job_id: jobId, sender_id: senderId, receiver_id: receiverId, content, message_type: 'text' }])
       .select()
       .single();
-
     if (error) throw new Error(error.message);
     return data;
   },
+// Uploads a local file (image or audio) to Supabase Storage and returns its public URL.
+  // Uses fetch->blob->arrayBuffer rather than expo-file-system's base64 APIs, since that
+  // path is simpler, has no extra dependency, and avoids SDK-version-specific quirks.
+  uploadAttachment: async (localUri: string, kind: 'image' | 'audio'): Promise<string> => {
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+    const arrayBuffer = await new Response(blob).arrayBuffer();
+    const extension = kind === 'image' ? (localUri.split('.').pop() || 'jpg') : (localUri.split('.').pop() || 'm4a');
+    const contentType = kind === 'image' ? `image/${extension === 'jpg' ? 'jpeg' : extension}` : 'audio/m4a';
+    const path = `${kind}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
 
+    const { error: uploadError } = await supabase.storage
+      .from(ATTACHMENTS_BUCKET)
+      .upload(path, arrayBuffer, { contentType });
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data } = supabase.storage.from(ATTACHMENTS_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  },
+
+  sendAttachmentMessage: async (
+    jobId: number,
+    senderId: number,
+    receiverId: number,
+    url: string,
+    kind: 'image' | 'audio',
+    metadata?: AttachmentMetadata
+  ): Promise<Message> => {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([{
+        job_id: jobId,
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content: url,
+        message_type: kind,
+        metadata: metadata || null,
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
   // Sends (or replaces) the single "job card" message for a given job within a specific
   // conversation thread (chatJobId — may differ from the real jobId if the thread was
   // reused). Deletes any prior job_card rows for that job so only the latest state shows.
@@ -132,7 +174,10 @@ export const messageService = {
     if (error) throw new Error(error.message);
     return data && data.length > 0 ? data[0] : null;
   },
-
+deleteMessage: async (messageId: string): Promise<void> => {
+    const { error } = await supabase.from('messages').delete().eq('id', messageId);
+    if (error) throw new Error(error.message);
+  },
   deleteConversation: async (jobId: number): Promise<void> => {
     const { error } = await supabase
       .from('messages')
@@ -141,7 +186,34 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
   },
+getUnreadCount: async (userId: number): Promise<number> => {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
+    if (error) throw new Error(error.message);
+    return count || 0;
+  },
 
+  // Fires on any new incoming message or read-status change for this user, so a
+  // tab-bar badge can stay live without polling.
+  subscribeToUnreadCount: (userId: number, onChange: () => void) => {
+    const channel = supabase
+      .channel(`unread-count:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+        () => onChange()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+        () => onChange()
+      )
+      .subscribe();
+    return channel;
+  },
   markAsRead: async (jobId: number, receiverId: number): Promise<void> => {
     await supabase
       .from('messages')
@@ -158,6 +230,18 @@ export const messageService = {
         'postgres_changes',
         {
           event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `job_id=eq.${jobId}`,
+        },
+        (payload) => {
+          onMessage(payload.new as Message);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'messages',
           filter: `job_id=eq.${jobId}`,
