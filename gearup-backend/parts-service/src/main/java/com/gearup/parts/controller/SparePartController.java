@@ -49,7 +49,75 @@ public class SparePartController {
         Long buyerId = extractUserId(authHeader);
         return ResponseEntity.ok(sparePartService.getMyOrders(buyerId));
     }
+@GetMapping("/{id}/orders")
+    public ResponseEntity<List<PartOrderDto>> getOrdersForPart(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long id) {
+        Long sellerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.getOrdersForPart(sellerId, id));
+    }
 
+    @GetMapping("/orders/{orderId}")
+    public ResponseEntity<PartOrderDto> getOrderById(@PathVariable Long orderId) {
+        return ResponseEntity.ok(sparePartService.getOrderById(orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/accept")
+    public ResponseEntity<PartOrderDto> acceptOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long sellerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.acceptOrder(sellerId, orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/decline")
+    public ResponseEntity<PartOrderDto> declineOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long sellerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.declineOrder(sellerId, orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/cancel")
+    public ResponseEntity<PartOrderDto> cancelOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long buyerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.cancelOrder(buyerId, orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/complete")
+    public ResponseEntity<PartOrderDto> completeOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long sellerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.completeOrder(sellerId, orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/propose-price")
+    public ResponseEntity<PartOrderDto> proposePrice(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId,
+            @Valid @RequestBody com.gearup.parts.dto.ProposePartPriceRequest request) {
+        Long userId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.proposePrice(userId, orderId, request.getProposedPrice()));
+    }
+
+    @PutMapping("/orders/{orderId}/accept-price")
+    public ResponseEntity<PartOrderDto> acceptProposedPrice(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long userId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.acceptProposedPrice(userId, orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/reject-price")
+    public ResponseEntity<PartOrderDto> rejectProposedPrice(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        Long userId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.rejectProposedPrice(userId, orderId));
+    }
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadImage(
             @RequestHeader("Authorization") String authHeader,
