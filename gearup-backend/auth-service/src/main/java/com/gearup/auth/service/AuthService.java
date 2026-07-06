@@ -1,8 +1,12 @@
 package com.gearup.auth.service;
 import com.gearup.auth.dto.*;
+import com.gearup.auth.entity.AccountDeletionCode;
+import com.gearup.auth.entity.AccountDeletionRequest;
 import com.gearup.auth.entity.PasswordResetToken;
 import com.gearup.auth.entity.RegistrationCode;
 import com.gearup.auth.entity.User;
+import com.gearup.auth.repository.AccountDeletionCodeRepository;
+import com.gearup.auth.repository.AccountDeletionRequestRepository;
 import com.gearup.auth.repository.PasswordResetTokenRepository;
 import com.gearup.auth.repository.RegistrationCodeRepository;
 import com.gearup.auth.repository.UserRepository;
@@ -22,6 +26,8 @@ public class AuthService {
 private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RegistrationCodeRepository registrationCodeRepository;
+    private final AccountDeletionCodeRepository accountDeletionCodeRepository;
+    private final AccountDeletionRequestRepository accountDeletionRequestRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -191,6 +197,70 @@ public void verifyResetCode(VerifyResetCodeRequest request) {
         // code anyway. This lets the user come back to this exact code if they
         // navigate away before finishing the "set new password" step.
     }
+    public void sendAccountDeletionCode(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        AccountDeletionCode deletionCode = AccountDeletionCode.builder()
+                .userId(userId)
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+        accountDeletionCodeRepository.save(deletionCode);
+        mailService.sendAccountDeletionCodeEmail(user.getEmail(), user.getName(), code);
+    }
+
+    public AccountDeletionRequestDto verifyAndCreateDeletionRequest(Long userId, String code) {
+        accountDeletionRequestRepository
+                .findTopByUserIdAndStatusOrderByRequestedAtDesc(userId, AccountDeletionRequest.Status.PENDING)
+                .ifPresent(existing -> {
+                    throw new RuntimeException("You already have a pending deletion request");
+                });
+
+        AccountDeletionCode deletionCode = accountDeletionCodeRepository
+                .findTopByUserIdAndCodeOrderByCreatedAtDesc(userId, code)
+                .orElseThrow(() -> new RuntimeException("Invalid code"));
+
+        if (deletionCode.isUsed()) {
+            throw new RuntimeException("This code has already been used. Please request a new one");
+        }
+        if (deletionCode.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("This code has expired. Please request a new one");
+        }
+
+        deletionCode.setUsed(true);
+        accountDeletionCodeRepository.save(deletionCode);
+
+        AccountDeletionRequest saved = accountDeletionRequestRepository.save(
+                AccountDeletionRequest.builder().userId(userId).build()
+        );
+        return AccountDeletionRequestDto.builder()
+                .id(saved.getId())
+                .status(saved.getStatus())
+                .requestedAt(saved.getRequestedAt())
+                .build();
+    }
+
+    public AccountDeletionRequestDto getPendingDeletionRequest(Long userId) {
+        return accountDeletionRequestRepository
+                .findTopByUserIdAndStatusOrderByRequestedAtDesc(userId, AccountDeletionRequest.Status.PENDING)
+                .map(r -> AccountDeletionRequestDto.builder()
+                        .id(r.getId())
+                        .status(r.getStatus())
+                        .requestedAt(r.getRequestedAt())
+                        .build())
+                .orElse(null);
+    }
+
+    public void cancelDeletionRequest(Long userId) {
+        AccountDeletionRequest request = accountDeletionRequestRepository
+                .findTopByUserIdAndStatusOrderByRequestedAtDesc(userId, AccountDeletionRequest.Status.PENDING)
+                .orElseThrow(() -> new RuntimeException("No pending deletion request found"));
+        request.setStatus(AccountDeletionRequest.Status.CANCELLED);
+        accountDeletionRequestRepository.save(request);
+    }
+
     public void resetPassword(ResetPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Invalid email or code"));

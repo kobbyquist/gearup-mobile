@@ -1,6 +1,7 @@
 package com.gearup.auth.controller;
 
 import com.gearup.auth.dto.*;
+import com.gearup.auth.security.JwtService;
 import com.gearup.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -51,5 +53,34 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Password reset successful. Please log in with your new password."));
+    }
+
+    @PostMapping("/account/deletion/send-code")
+    public ResponseEntity<Map<String, String>> sendDeletionCode(@RequestHeader("Authorization") String authHeader) {
+        authService.sendAccountDeletionCode(extractUserId(authHeader));
+        return ResponseEntity.ok(Map.of("message", "Verification code sent to your email."));
+    }
+
+    @PostMapping("/account/deletion/verify")
+    public ResponseEntity<AccountDeletionRequestDto> verifyDeletion(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody VerifyDeletionRequest request) {
+        return ResponseEntity.ok(authService.verifyAndCreateDeletionRequest(extractUserId(authHeader), request.getCode()));
+    }
+
+    @GetMapping("/account/deletion/status")
+    public ResponseEntity<AccountDeletionRequestDto> getDeletionStatus(@RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(authService.getPendingDeletionRequest(extractUserId(authHeader)));
+    }
+
+    @PostMapping("/account/deletion/cancel")
+    public ResponseEntity<Map<String, String>> cancelDeletion(@RequestHeader("Authorization") String authHeader) {
+        authService.cancelDeletionRequest(extractUserId(authHeader));
+        return ResponseEntity.ok(Map.of("message", "Your deletion request has been cancelled."));
+    }
+
+    private Long extractUserId(String authHeader) {
+        String token = authHeader.substring(7);
+        return jwtService.extractUserId(token);
     }
 }

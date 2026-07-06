@@ -24,6 +24,7 @@ export default function OtpScreen({ route, navigation }: any) {
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const { mode = 'register', name, email, phone, password, role } = route.params;
   const isRegisterMode = mode === 'register';
+  const isDeleteMode = mode === 'delete';
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
@@ -78,6 +79,19 @@ export default function OtpScreen({ route, navigation }: any) {
       dispatch(verifyRegistrationThunk({ name, email, phone, password, role, code: finalCode }));
       return;
     }
+    if (isDeleteMode) {
+      setResetVerifying(true);
+      setResetError(null);
+      try {
+        await authService.verifyAccountDeletion(finalCode);
+        navigation.replace('AccountDeletionSubmitted');
+      } catch (e: any) {
+        setResetError(e.message || 'Invalid or expired code. Please try again.');
+      } finally {
+        setResetVerifying(false);
+      }
+      return;
+    }
     setResetVerifying(true);
     setResetError(null);
     try {
@@ -94,6 +108,8 @@ export default function OtpScreen({ route, navigation }: any) {
     try {
       if (isRegisterMode) {
         await authService.sendRegistrationCode({ name, email, phone, password, role });
+      } else if (isDeleteMode) {
+        await authService.sendAccountDeletionCode();
       } else {
         await authService.forgotPassword(email);
       }
@@ -140,7 +156,7 @@ export default function OtpScreen({ route, navigation }: any) {
           <Ionicons name="mail-outline" size={36} color="#ffffff" />
         </LinearGradient>
         {/* Title */}
-        <Text style={styles.title}>{isRegisterMode ? 'Verify your email' : 'Enter reset code'}</Text>
+        <Text style={styles.title}>{isRegisterMode ? 'Verify your email' : isDeleteMode ? 'Confirm account deletion' : 'Enter reset code'}</Text>
         <Text style={styles.subtitle}>
           We sent a 6-digit code to{'\n'}
           <Text style={styles.phone}>{maskedEmail}</Text>
