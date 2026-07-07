@@ -34,9 +34,12 @@ export default function OwnerMessagesScreen({ navigation }: any) {
       const enriched = await Promise.all(
         msgs.map(async (msg: any) => {
           const isPartOrder = msg.job_id < 0;
+          // Conversations are reused across a mechanic's jobs — if the job that
+          // originally started this thread was since deleted, fall back to a
+          // generic label instead of hiding the conversation entirely.
           const job = isPartOrder
             ? { id: msg.job_id, title: 'Part Purchase', isPartOrder: true }
-            : jobs.find((j: any) => j.id === msg.job_id);
+            : jobs.find((j: any) => j.id === msg.job_id) || { id: msg.job_id, title: 'Previous Job' };
           const otherUserId = msg.sender_id === myId ? msg.receiver_id : msg.sender_id;
           let otherUserName = 'Mechanic';
           try {
@@ -46,8 +49,7 @@ export default function OwnerMessagesScreen({ navigation }: any) {
           return { ...msg, job, otherUserId, otherUserName };
         })
       );
-
-      setConversations(enriched.filter(c => c.job));
+      setConversations(enriched);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {

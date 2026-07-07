@@ -19,6 +19,7 @@ import { jobService } from '../services/jobService';
 import { paymentService } from '../services/paymentService';
 import { reviewService } from '../services/reviewService';
 import ConfirmDialog from '../components/ConfirmDialog';
+import WalletPaymentSheet from '../components/WalletPaymentSheet';
 import { AppAlertCard } from '../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../constants';
 const getStatusColor = (status: string) => {
