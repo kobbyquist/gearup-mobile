@@ -7,6 +7,7 @@ import com.gearup.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -34,6 +35,11 @@ public class UserController {
     public ResponseEntity<UserProfileDto> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
+
+    @GetMapping("/mechanics")
+public ResponseEntity<List<UserProfileDto>> getAllMechanics() {
+    return ResponseEntity.ok(userService.getAllMechanics());
+}
 
     private Long extractUserId(String authHeader) {
         String token = authHeader.substring(7);

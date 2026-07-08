@@ -17,4 +17,6 @@ public class UserProfileDto {
     private String bio;
     private String location;
     private Role role;
+    private Double latitude;
+    private Double longitude;
 }

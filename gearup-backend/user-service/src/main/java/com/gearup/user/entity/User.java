@@ -36,6 +36,8 @@ public class User {
     private String profileImage;
     private String bio;
     private String location;
+    private Double latitude;
+    private Double longitude;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

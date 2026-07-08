@@ -18,4 +18,10 @@ export const userService = {
   getUserById: async (userId: number) => {
     return await get(`${API.USER}/api/users/${userId}`);
   },
+
+  getAllMechanics: async () => {
+    const api = await getAPI();
+    return await get(`${api.USER}/api/users/mechanics`);
+  },
+
 };

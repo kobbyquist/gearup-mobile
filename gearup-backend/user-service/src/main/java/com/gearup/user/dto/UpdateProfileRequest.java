@@ -12,4 +12,6 @@ public class UpdateProfileRequest {
     private String profileImage;
     private String bio;
     private String location;
+    private Double latitude;
+    private Double longitude;
 }

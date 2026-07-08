@@ -6,6 +6,8 @@ import com.gearup.user.entity.User;
 import com.gearup.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,14 @@ public class UserService {
         return mapToDto(user);
     }
 
+    public List<UserProfileDto> getAllMechanics() {
+    return userRepository.findAll()
+            .stream()
+            .filter(u -> u.getRole() == User.Role.MECHANIC)
+            .map(this::mapToDto)
+            .collect(Collectors.toList());
+}
+
     public UserProfileDto updateProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -28,6 +38,8 @@ public class UserService {
         if (request.getProfileImage() != null) user.setProfileImage(request.getProfileImage());
         if (request.getBio() != null) user.setBio(request.getBio());
         if (request.getLocation() != null) user.setLocation(request.getLocation());
+        if (request.getLatitude() != null) user.setLatitude(request.getLatitude());
+        if (request.getLongitude() != null) user.setLongitude(request.getLongitude());
 
         User saved = userRepository.save(user);
         return mapToDto(saved);
@@ -40,15 +52,17 @@ public class UserService {
     }
 
     private UserProfileDto mapToDto(User user) {
-        return UserProfileDto.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .profileImage(user.getProfileImage())
-                .bio(user.getBio())
-                .location(user.getLocation())
-                .role(user.getRole())
-                .build();
-    }
+    return UserProfileDto.builder()
+            .id(user.getId())
+            .name(user.getName())
+            .email(user.getEmail())
+            .phone(user.getPhone())
+            .profileImage(user.getProfileImage())
+            .bio(user.getBio())
+            .location(user.getLocation())
+            .latitude(user.getLatitude())
+            .longitude(user.getLongitude())
+            .role(user.getRole())
+            .build();
+}
 }
