@@ -26,7 +26,21 @@ public class MailService {
         );
         mailSender.send(message);
     }
-
+public void sendAccountDeletionCodeEmail(String toEmail, String name, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("GearUp <" + fromEmail + ">");
+        message.setTo(toEmail);
+        message.setSubject("Confirm your GearUp account deletion request");
+        message.setText(
+                "Hi " + name + ",\n\n" +
+                "We received a request to delete your GearUp account. Enter this code in the app to confirm:\n\n" +
+                code + "\n\n" +
+                "This code expires in 15 minutes. Submitting this request does not delete your account immediately — " +
+                "it will be reviewed before any action is taken. If you didn't request this, you can safely ignore this email.\n\n" +
+                "— The GearUp Team"
+        );
+        mailSender.send(message);
+    }
     public void sendRegistrationCodeEmail(String toEmail, String name, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("GearUp <" + fromEmail + ">");
