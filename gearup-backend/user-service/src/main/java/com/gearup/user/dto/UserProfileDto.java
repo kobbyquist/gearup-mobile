@@ -2,6 +2,7 @@ package com.gearup.user.dto;
 
 import com.gearup.user.entity.User.Role;
 import lombok.*;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Getter
@@ -23,4 +24,5 @@ public class UserProfileDto {
     private boolean acceptingBookings;
     private LocalTime availabilityStart;
     private LocalTime availabilityEnd;
+    private LocalDateTime createdAt;
 }

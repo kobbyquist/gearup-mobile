@@ -11,6 +11,9 @@ import { RootState, AppDispatch } from '../../store';
 import { logout } from '../../store/slices/authSlice';
 import { userService } from '../../services/userService';
 import { reviewService } from '../../services/reviewService';
+import { authService } from '../../services/authService';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 import { locationService } from '../../services/locationService';
 
@@ -55,6 +58,12 @@ export default function MechanicProfileScreen({ navigation }: any) {
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+  const [cancelDeletionConfirm, setCancelDeletionConfirm] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState(false);
+  const [sendingDeletionCode, setSendingDeletionCode] = useState(false);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warning'; title: string; message: string } | null>(null);
 
   const fetchData = async () => {
     try {
@@ -84,7 +93,12 @@ export default function MechanicProfileScreen({ navigation }: any) {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+useEffect(() => {
+    fetchData();
+    authService.getDeletionRequestStatus()
+      .then(r => setPendingDeletion(!!r))
+      .catch(() => setPendingDeletion(false));
+  }, []);
 
   const handleUpdateProfile = async () => {
     try {
@@ -150,10 +164,30 @@ export default function MechanicProfileScreen({ navigation }: any) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => dispatch(logout()) },
-    ]);
+    setLogoutConfirm(false);
+    dispatch(logout());
+  };
+  const handleDeleteAccountRequest = async () => {
+    setDeleteAccountConfirm(false);
+    setSendingDeletionCode(true);
+    try {
+      await authService.sendAccountDeletionCode();
+      navigation.navigate('Otp', { mode: 'delete', email: profile?.email });
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Error', message: e.message || 'Could not send verification code.' });
+    } finally {
+      setSendingDeletionCode(false);
+    }
+  };
+  const handleCancelDeletionRequest = async () => {
+    setCancelDeletionConfirm(false);
+    try {
+      await authService.cancelAccountDeletion();
+      setPendingDeletion(false);
+      setAlert({ type: 'success', title: 'Cancelled', message: 'Your deletion request has been cancelled.' });
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Error', message: e.message || 'Could not cancel the request.' });
+    }
   };
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#b45309" />;
@@ -330,10 +364,30 @@ export default function MechanicProfileScreen({ navigation }: any) {
           <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={() => setLogoutConfirm(true)}>
           <Ionicons name="log-out-outline" size={20} color="#dc2626" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+        {pendingDeletion ? (
+          <TouchableOpacity style={styles.deleteAccountBtn} onPress={() => setCancelDeletionConfirm(true)}>
+            <Ionicons name="time-outline" size={18} color="#b45309" />
+            <Text style={styles.deleteAccountPendingText}>Deletion Request Pending — Cancel</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.deleteAccountBtn}
+            onPress={() => setDeleteAccountConfirm(true)}
+            disabled={sendingDeletionCode}>
+            {sendingDeletionCode ? (
+              <ActivityIndicator size="small" color="#dc2626" />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text style={styles.deleteAccountText}>Delete Account</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.devBtn}
           onPress={() => navigation.navigate('DevSettings')}>
@@ -341,7 +395,51 @@ export default function MechanicProfileScreen({ navigation }: any) {
         </TouchableOpacity>
         <View style={{ height: 40 }} />
       </ScrollView>
-
+      <ConfirmDialog
+        visible={logoutConfirm}
+        icon="log-out-outline"
+        title="Log Out"
+        message="Are you sure you want to log out?"
+        confirmText="Log Out"
+        destructive
+        accentColor="#b45309"
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutConfirm(false)}
+      />
+      <ConfirmDialog
+        visible={deleteAccountConfirm}
+        icon="warning-outline"
+        title="Delete Account"
+        message="We'll send a verification code to your email to confirm this request. Your account stays fully active until the request is reviewed and approved."
+        confirmText="Send Code"
+        destructive
+        accentColor="#b45309"
+        onConfirm={handleDeleteAccountRequest}
+        onCancel={() => setDeleteAccountConfirm(false)}
+      />
+      <ConfirmDialog
+        visible={cancelDeletionConfirm}
+        icon="close-circle-outline"
+        title="Cancel Deletion Request"
+        message="Are you sure you want to cancel your pending account deletion request?"
+        confirmText="Yes, Cancel It"
+        accentColor="#b45309"
+        onConfirm={handleCancelDeletionRequest}
+        onCancel={() => setCancelDeletionConfirm(false)}
+      />
+      <Modal visible={!!alert} transparent animationType="fade" onRequestClose={() => setAlert(null)}>
+        <View style={styles.alertOverlay}>
+          {alert && (
+            <AppAlertCard
+              type={alert.type}
+              title={alert.title}
+              message={alert.message}
+              accentColor="#b45309"
+              onClose={() => setAlert(null)}
+            />
+          )}
+        </View>
+      </Modal>
       {/* Edit Profile Modal */}
       <Modal visible={editModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modal}>
@@ -432,8 +530,12 @@ const styles = StyleSheet.create({
   walletBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: SPACING.lg, marginTop: SPACING.md, padding: SPACING.md, backgroundColor: '#fff', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#f3f4f6' },
   walletBtnLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   walletBtnText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#1b1b1b' },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, margin: SPACING.lg, padding: SPACING.md, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
   logoutText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#dc2626' },
+  deleteAccountBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, margin: SPACING.lg, marginTop: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#f3f4f6' },
+  deleteAccountText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#dc2626' },
+  deleteAccountPendingText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#b45309' },
+  alertOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   modal: { flex: 1, backgroundColor: '#f9fafb' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   modalTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#1b1b1b' },

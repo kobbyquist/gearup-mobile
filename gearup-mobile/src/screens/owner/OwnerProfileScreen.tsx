@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, Alert, ActivityIndicator, TextInput, Modal, Platform
+  StatusBar, ActivityIndicator, TextInput, Modal, Platform, Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,9 @@ import { RootState, AppDispatch } from '../../store';
 import { logout } from '../../store/slices/authSlice';
 import { userService } from '../../services/userService';
 import { vehicleService } from '../../services/vehicleService';
+import { authService } from '../../services/authService';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -21,9 +24,7 @@ const VEHICLE_ICONS: Record<string, any> = {
   MOTORCYCLE: 'bicycle',
   VAN: 'bus',
 };
-
 const VEHICLE_TYPES = ['CAR', 'SUV', 'TRUCK', 'VAN', 'MOTORCYCLE'];
-
 const emptyVehicleForm = {
   make: '', model: '', year: '', licensePlate: '', color: '', type: 'CAR',
   lastServicedDate: null as Date | null,
@@ -32,13 +33,11 @@ const emptyVehicleForm = {
   roadworthyExpiry: null as Date | null,
   notes: '',
 };
-
 const formatDate = (date: Date | null | string) => {
   if (!date) return 'Not set';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
-
 const dateToISO = (date: Date | null): string | undefined => {
   if (!date) return undefined;
   const y = date.getFullYear();
@@ -46,7 +45,6 @@ const dateToISO = (date: Date | null): string | undefined => {
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
-
 const isExpiringSoon = (dateStr: string | null | undefined) => {
   if (!dateStr) return false;
   const date = new Date(dateStr);
@@ -54,11 +52,47 @@ const isExpiringSoon = (dateStr: string | null | undefined) => {
   const daysLeft = (date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   return daysLeft < 30;
 };
-
 const isExpired = (dateStr: string | null | undefined) => {
   if (!dateStr) return false;
   return new Date(dateStr).getTime() < new Date().getTime();
 };
+
+// ─── VehicleCard: its own component so entrance-animation hooks are safe/stable ───
+function VehicleCard({ vehicle, index, onPress }: { vehicle: any; index: number; onPress: () => void }) {
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(cardAnim, {
+      toValue: 1,
+      duration: 350,
+      delay: Math.min(index * 60, 300),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+  const animatedStyle = {
+    opacity: cardAnim,
+    transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+  };
+  return (
+    <Animated.View style={animatedStyle}>
+      <TouchableOpacity style={styles.vehicleCard} activeOpacity={0.85} onPress={onPress}>
+        <View style={styles.vehicleIcon}>
+          <Ionicons name={VEHICLE_ICONS[vehicle.type] || 'car'} size={24} color="#1b4332" />
+        </View>
+        <View style={styles.vehicleInfo}>
+          <Text style={styles.vehicleName}>{vehicle.make} {vehicle.model}</Text>
+          <Text style={styles.vehicleDetails}>{vehicle.year} · {vehicle.licensePlate} {vehicle.color ? `· ${vehicle.color}` : ''}</Text>
+          {(isExpired(vehicle.insuranceExpiry) || isExpired(vehicle.roadworthyExpiry)) && (
+            <View style={styles.warnPill}>
+              <Ionicons name="alert-circle" size={10} color="#dc2626" />
+              <Text style={styles.warnPillText}>Document expired</Text>
+            </View>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 export default function OwnerProfileScreen({ navigation }: any) {
   const dispatch = useDispatch<AppDispatch>();
@@ -74,6 +108,14 @@ export default function OwnerProfileScreen({ navigation }: any) {
   const [editForm, setEditForm] = useState({ name: '', phone: '', bio: '', location: '' });
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
   const [activeDateField, setActiveDateField] = useState<'lastServicedDate' | 'insuranceExpiry' | 'roadworthyExpiry' | null>(null);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [deleteVehicleConfirm, setDeleteVehicleConfirm] = useState<number | null>(null);
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+  const [cancelDeletionConfirm, setCancelDeletionConfirm] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState(false);
+  const [sendingDeletionCode, setSendingDeletionCode] = useState(false);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warning'; title: string; message: string } | null>(null);
+  const enterAnim = useRef(new Animated.Value(0)).current;
 
   const fetchData = async () => {
     try {
@@ -90,13 +132,18 @@ export default function OwnerProfileScreen({ navigation }: any) {
         location: profileData.location || '',
       });
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      setAlert({ type: 'error', title: 'Error', message: error.message });
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    Animated.timing(enterAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    authService.getDeletionRequestStatus()
+      .then(r => setPendingDeletion(!!r))
+      .catch(() => setPendingDeletion(false));
+  }, []);
   useFocusEffect(
     React.useCallback(() => {
       const vehicleId = navigation.getState()?.routes?.find((r: any) => r.name === 'Profile')?.params?.openVehicleId;
@@ -110,24 +157,21 @@ export default function OwnerProfileScreen({ navigation }: any) {
       }
     }, [vehicles])
   );
-
   const handleUpdateProfile = async () => {
     try {
       await userService.updateProfile(editForm);
       setEditModal(false);
       fetchData();
-      Alert.alert('Success', 'Profile updated!');
+      setAlert({ type: 'success', title: 'Success', message: 'Profile updated!' });
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      setAlert({ type: 'error', title: 'Error', message: error.message });
     }
   };
-
   const openAddVehicle = () => {
     setEditingVehicleId(null);
     setVehicleForm(emptyVehicleForm);
     setVehicleModal(true);
   };
-
   const openEditVehicle = (v: any) => {
     setEditingVehicleId(v.id);
     setVehicleForm({
@@ -146,10 +190,9 @@ export default function OwnerProfileScreen({ navigation }: any) {
     setDetailModal(false);
     setVehicleModal(true);
   };
-
   const handleSubmitVehicle = async () => {
     if (!vehicleForm.make || !vehicleForm.model || !vehicleForm.year || !vehicleForm.licensePlate) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      setAlert({ type: 'warning', title: 'Missing Information', message: 'Please fill in all required fields' });
       return;
     }
     const payload = {
@@ -168,51 +211,67 @@ export default function OwnerProfileScreen({ navigation }: any) {
     try {
       if (editingVehicleId) {
         await vehicleService.updateVehicle(editingVehicleId, payload);
-        Alert.alert('Success', 'Vehicle updated!');
+        setAlert({ type: 'success', title: 'Success', message: 'Vehicle updated!' });
       } else {
         await vehicleService.addVehicle(payload as any);
-        Alert.alert('Success', 'Vehicle added!');
+        setAlert({ type: 'success', title: 'Success', message: 'Vehicle added!' });
       }
       setVehicleModal(false);
       setVehicleForm(emptyVehicleForm);
       setEditingVehicleId(null);
       fetchData();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      setAlert({ type: 'error', title: 'Error', message: error.message });
     }
   };
-
-  const handleDeleteVehicle = (vehicleId: number) => {
-    Alert.alert('Delete Vehicle', 'Are you sure you want to remove this vehicle?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try {
-            await vehicleService.deleteVehicle(vehicleId);
-            setDetailModal(false);
-            fetchData();
-          } catch (e: any) {
-            Alert.alert('Error', e.message);
-          }
-        }
-      }
-    ]);
+  const confirmDeleteVehicle = async () => {
+    const vehicleId = deleteVehicleConfirm;
+    setDeleteVehicleConfirm(null);
+    if (!vehicleId) return;
+    try {
+      await vehicleService.deleteVehicle(vehicleId);
+      setDetailModal(false);
+      fetchData();
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Error', message: e.message });
+    }
   };
-
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => dispatch(logout()) },
-    ]);
+    setLogoutConfirm(false);
+    dispatch(logout());
   };
-
+  const handleDeleteAccountRequest = async () => {
+    setDeleteAccountConfirm(false);
+    setSendingDeletionCode(true);
+    try {
+      await authService.sendAccountDeletionCode();
+      navigation.navigate('Otp', { mode: 'delete', email: profile?.email });
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Error', message: e.message || 'Could not send verification code.' });
+    } finally {
+      setSendingDeletionCode(false);
+    }
+  };
+  const handleCancelDeletionRequest = async () => {
+    setCancelDeletionConfirm(false);
+    try {
+      await authService.cancelAccountDeletion();
+      setPendingDeletion(false);
+      setAlert({ type: 'success', title: 'Cancelled', message: 'Your deletion request has been cancelled.' });
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Error', message: e.message || 'Could not cancel the request.' });
+    }
+  };
   const onDateChange = (event: any, selected?: Date) => {
     if (Platform.OS === 'android') setActiveDateField(null);
     if (event.type === 'dismissed' || !selected || !activeDateField) return;
     setVehicleForm(prev => ({ ...prev, [activeDateField]: selected }));
   };
-
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#1b4332" />;
+
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+    : '—';
 
   return (
     <View style={styles.container}>
@@ -237,43 +296,46 @@ export default function OwnerProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </LinearGradient>
 
-        {/* Vehicles */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Vehicles</Text>
-            <TouchableOpacity onPress={openAddVehicle}>
-              <Ionicons name="add-circle-outline" size={24} color="#1b4332" />
-            </TouchableOpacity>
+        <Animated.View style={{ opacity: enterAnim, transform: [{ translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+          {/* Stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{vehicles.length}</Text>
+              <Text style={styles.statLabel}>{vehicles.length === 1 ? 'Vehicle' : 'Vehicles'}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{memberSince}</Text>
+              <Text style={styles.statLabel}>Member Since</Text>
+            </View>
           </View>
-          {vehicles.length === 0 ? (
-            <TouchableOpacity style={styles.addVehicleCard} onPress={openAddVehicle}>
-              <Ionicons name="car-outline" size={32} color="#d1d5db" />
-              <Text style={styles.addVehicleText}>Add your first vehicle</Text>
-            </TouchableOpacity>
-          ) : (
-            vehicles.map(v => (
-              <TouchableOpacity
-                key={v.id}
-                style={styles.vehicleCard}
-                onPress={() => { setSelectedVehicle(v); setDetailModal(true); }}>
-                <View style={styles.vehicleIcon}>
-                  <Ionicons name={VEHICLE_ICONS[v.type] || 'car'} size={24} color="#1b4332" />
-                </View>
-                <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleName}>{v.make} {v.model}</Text>
-                  <Text style={styles.vehicleDetails}>{v.year} · {v.licensePlate} {v.color ? `· ${v.color}` : ''}</Text>
-                  {(isExpired(v.insuranceExpiry) || isExpired(v.roadworthyExpiry)) && (
-                    <View style={styles.warnPill}>
-                      <Ionicons name="alert-circle" size={10} color="#dc2626" />
-                      <Text style={styles.warnPillText}>Document expired</Text>
-                    </View>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+
+          {/* Vehicles */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Vehicles</Text>
+              <TouchableOpacity onPress={openAddVehicle}>
+                <Ionicons name="add-circle-outline" size={24} color="#1b4332" />
               </TouchableOpacity>
-            ))
-          )}
-        </View>
+            </View>
+            {vehicles.length === 0 ? (
+              <TouchableOpacity style={styles.addVehicleCard} onPress={openAddVehicle} activeOpacity={0.85}>
+                <View style={styles.addVehicleIconWrap}>
+                  <Ionicons name="car-outline" size={28} color="#9ca3af" />
+                </View>
+                <Text style={styles.addVehicleText}>Add your first vehicle</Text>
+              </TouchableOpacity>
+            ) : (
+              vehicles.map((v, index) => (
+                <VehicleCard
+                  key={v.id}
+                  vehicle={v}
+                  index={index}
+                  onPress={() => { setSelectedVehicle(v); setDetailModal(true); }}
+                />
+              ))
+            )}
+          </View>
+        </Animated.View>
 
         <TouchableOpacity style={styles.walletBtn} onPress={() => navigation.navigate('Wallet')}>
           <View style={styles.walletBtnLeft}>
@@ -282,11 +344,30 @@ export default function OwnerProfileScreen({ navigation }: any) {
           </View>
           <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={() => setLogoutConfirm(true)}>
           <Ionicons name="log-out-outline" size={20} color="#dc2626" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+        {pendingDeletion ? (
+          <TouchableOpacity style={styles.deleteAccountBtn} onPress={() => setCancelDeletionConfirm(true)}>
+            <Ionicons name="time-outline" size={18} color="#b45309" />
+            <Text style={styles.deleteAccountPendingText}>Deletion Request Pending — Cancel</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.deleteAccountBtn}
+            onPress={() => setDeleteAccountConfirm(true)}
+            disabled={sendingDeletionCode}>
+            {sendingDeletionCode ? (
+              <ActivityIndicator size="small" color="#dc2626" />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text style={styles.deleteAccountText}>Delete Account</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.devBtn}
           onPress={() => navigation.navigate('DevSettings')}>
@@ -343,7 +424,6 @@ export default function OwnerProfileScreen({ navigation }: any) {
             <TextInput style={styles.input} placeholder="e.g. GR-1234-20" value={vehicleForm.licensePlate} onChangeText={t => setVehicleForm({ ...vehicleForm, licensePlate: t })} />
             <Text style={styles.label}>Color</Text>
             <TextInput style={styles.input} placeholder="e.g. Black" value={vehicleForm.color} onChangeText={t => setVehicleForm({ ...vehicleForm, color: t })} />
-
             <Text style={styles.label}>Vehicle Type</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {VEHICLE_TYPES.map(type => (
@@ -355,28 +435,23 @@ export default function OwnerProfileScreen({ navigation }: any) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-
             <Text style={styles.label}>Mileage / Odometer (km)</Text>
             <TextInput style={styles.input} placeholder="e.g. 45000" value={vehicleForm.mileage} onChangeText={t => setVehicleForm({ ...vehicleForm, mileage: t })} keyboardType="numeric" />
-
             <Text style={styles.label}>Last Serviced</Text>
             <TouchableOpacity style={styles.dateBtn} onPress={() => setActiveDateField('lastServicedDate')}>
               <Ionicons name="build-outline" size={16} color="#1b4332" />
               <Text style={styles.dateBtnText}>{formatDate(vehicleForm.lastServicedDate)}</Text>
             </TouchableOpacity>
-
             <Text style={styles.label}>Insurance Expiry</Text>
             <TouchableOpacity style={styles.dateBtn} onPress={() => setActiveDateField('insuranceExpiry')}>
               <Ionicons name="shield-checkmark-outline" size={16} color="#1b4332" />
               <Text style={styles.dateBtnText}>{formatDate(vehicleForm.insuranceExpiry)}</Text>
             </TouchableOpacity>
-
             <Text style={styles.label}>Roadworthy / Inspection Expiry</Text>
             <TouchableOpacity style={styles.dateBtn} onPress={() => setActiveDateField('roadworthyExpiry')}>
               <Ionicons name="checkmark-done-outline" size={16} color="#1b4332" />
               <Text style={styles.dateBtnText}>{formatDate(vehicleForm.roadworthyExpiry)}</Text>
             </TouchableOpacity>
-
             {activeDateField && (
               <View style={styles.pickerContainer}>
                 <DateTimePicker
@@ -395,7 +470,6 @@ export default function OwnerProfileScreen({ navigation }: any) {
                 )}
               </View>
             )}
-
             <Text style={styles.label}>Notes</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -405,7 +479,6 @@ export default function OwnerProfileScreen({ navigation }: any) {
               multiline
               numberOfLines={3}
             />
-
             <TouchableOpacity style={styles.submitBtn} onPress={handleSubmitVehicle}>
               <LinearGradient colors={['#1b4332', '#2d6a4f']} style={styles.submitGradient}>
                 <Text style={styles.submitText}>{editingVehicleId ? 'Save Changes' : 'Add Vehicle'}</Text>
@@ -432,7 +505,6 @@ export default function OwnerProfileScreen({ navigation }: any) {
               </View>
               <Text style={styles.detailTitle}>{selectedVehicle.make} {selectedVehicle.model}</Text>
               <Text style={styles.detailSubtitle}>{selectedVehicle.year} · {selectedVehicle.licensePlate}</Text>
-
               <View style={styles.detailCard}>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Color</Text>
@@ -476,19 +548,17 @@ export default function OwnerProfileScreen({ navigation }: any) {
                   </Text>
                 </View>
               </View>
-
               {selectedVehicle.notes ? (
                 <View style={styles.notesCard}>
                   <Text style={styles.notesLabel}>Notes</Text>
                   <Text style={styles.notesText}>{selectedVehicle.notes}</Text>
                 </View>
               ) : null}
-
               <TouchableOpacity style={styles.editVehicleBtn} onPress={() => openEditVehicle(selectedVehicle)}>
                 <Ionicons name="pencil-outline" size={16} color="#1b4332" />
                 <Text style={styles.editVehicleBtnText}>Edit Vehicle</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteVehicleBtn} onPress={() => handleDeleteVehicle(selectedVehicle.id)}>
+              <TouchableOpacity style={styles.deleteVehicleBtn} onPress={() => setDeleteVehicleConfirm(selectedVehicle.id)}>
                 <Ionicons name="trash-outline" size={16} color="#dc2626" />
                 <Text style={styles.deleteVehicleBtnText}>Delete Vehicle</Text>
               </TouchableOpacity>
@@ -497,13 +567,64 @@ export default function OwnerProfileScreen({ navigation }: any) {
           )}
         </View>
       </Modal>
+
+      <ConfirmDialog
+        visible={logoutConfirm}
+        icon="log-out-outline"
+        title="Log Out"
+        message="Are you sure you want to log out?"
+        confirmText="Log Out"
+        destructive
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutConfirm(false)}
+      />
+      <ConfirmDialog
+        visible={deleteAccountConfirm}
+        icon="warning-outline"
+        title="Delete Account"
+        message="We'll send a verification code to your email to confirm this request. Your account stays fully active until the request is reviewed and approved."
+        confirmText="Send Code"
+        destructive
+        onConfirm={handleDeleteAccountRequest}
+        onCancel={() => setDeleteAccountConfirm(false)}
+      />
+      <ConfirmDialog
+        visible={cancelDeletionConfirm}
+        icon="close-circle-outline"
+        title="Cancel Deletion Request"
+        message="Are you sure you want to cancel your pending account deletion request?"
+        confirmText="Yes, Cancel It"
+        onConfirm={handleCancelDeletionRequest}
+        onCancel={() => setCancelDeletionConfirm(false)}
+      />
+      <ConfirmDialog
+        visible={!!deleteVehicleConfirm}
+        icon="trash-outline"
+        title="Delete Vehicle"
+        message="Are you sure you want to remove this vehicle?"
+        confirmText="Delete"
+        destructive
+        onConfirm={confirmDeleteVehicle}
+        onCancel={() => setDeleteVehicleConfirm(null)}
+      />
+      <Modal visible={!!alert} transparent animationType="fade" onRequestClose={() => setAlert(null)}>
+        <View style={styles.alertOverlay}>
+          {alert && (
+            <AppAlertCard
+              type={alert.type}
+              title={alert.title}
+              message={alert.message}
+              onClose={() => setAlert(null)}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
-  header: { paddingTop: 60, paddingBottom: SPACING.xl, alignItems: 'center', gap: SPACING.sm },
+  header: { paddingTop: 60, paddingBottom: SPACING.xl, alignItems: 'center', gap: SPACING.sm, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fbbf24', justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 32, fontWeight: '700', color: '#1b4332' },
   name: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#fff' },
@@ -513,10 +634,15 @@ const styles = StyleSheet.create({
   locationText: { fontSize: FONT_SIZES.sm, color: '#86efac' },
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fef3c7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.full },
   editBtnText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#1b4332' },
-  section: { padding: SPACING.lg },
+  statsRow: { flexDirection: 'row', padding: SPACING.lg, gap: SPACING.md },
+  statCard: { flex: 1, backgroundColor: '#fff', borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  statValue: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: '#1b4332' },
+  statLabel: { fontSize: FONT_SIZES.xs, color: '#6b7280', marginTop: 2 },
+  section: { paddingHorizontal: SPACING.lg },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: '#1b1b1b' },
   addVehicleCard: { alignItems: 'center', padding: SPACING.xl, backgroundColor: '#fff', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#e5e7eb', borderStyle: 'dashed', gap: 8 },
+  addVehicleIconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
   addVehicleText: { fontSize: FONT_SIZES.sm, color: '#9ca3af' },
   vehicleCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   vehicleIcon: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#f0fdf4', justifyContent: 'center', alignItems: 'center', marginRight: SPACING.md },
@@ -528,8 +654,11 @@ const styles = StyleSheet.create({
   walletBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: SPACING.lg, marginTop: SPACING.md, padding: SPACING.md, backgroundColor: '#fff', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#f3f4f6' },
   walletBtnLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   walletBtnText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#1b1b1b' },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, margin: SPACING.lg, padding: SPACING.md, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, marginHorizontal: SPACING.lg, marginTop: SPACING.lg, padding: SPACING.md, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
   logoutText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#dc2626' },
+  deleteAccountBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, margin: SPACING.lg, marginTop: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#f3f4f6' },
+  deleteAccountText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#dc2626' },
+  deleteAccountPendingText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#b45309' },
   modal: { flex: 1, backgroundColor: '#f9fafb' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   modalTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#1b1b1b' },
@@ -569,4 +698,5 @@ const styles = StyleSheet.create({
   editVehicleBtnText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b4332' },
   deleteVehicleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: SPACING.md, padding: 14, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
   deleteVehicleBtnText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#dc2626' },
+  alertOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
 });

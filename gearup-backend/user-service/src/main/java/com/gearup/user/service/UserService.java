@@ -69,6 +69,7 @@ public class UserService {
             .acceptingBookings(Boolean.TRUE.equals(user.getAcceptingBookings()))
             .availabilityStart(user.getAvailabilityStart())
             .availabilityEnd(user.getAvailabilityEnd())
+            .createdAt(user.getCreatedAt())
             .build();
 }
 }
