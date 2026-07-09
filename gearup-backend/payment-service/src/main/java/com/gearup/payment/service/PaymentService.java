@@ -22,6 +22,15 @@ public class PaymentService {
     private final WalletService walletService;
 
     public PaymentDto createPayment(Long payerId, CreatePaymentRequest request) {
+        // Guard against duplicate payments for the same job — without this, tapping
+        // "Pay" more than once (e.g. because the UI looked stale) silently creates
+        // a brand new charge every time, with no error ever surfacing.
+        paymentRepository.findByJobId(request.getJobId()).ifPresent(existing -> {
+            if (existing.getStatus() == Payment.PaymentStatus.COMPLETED) {
+                throw new RuntimeException("This job has already been paid for");
+            }
+        });
+
         Payment payment = Payment.builder()
                 .jobId(request.getJobId())
                 .payerId(payerId)
@@ -60,8 +69,16 @@ public class PaymentService {
     }
 
     public PaymentDto getPaymentByJob(Long jobId) {
-        Payment payment = paymentRepository.findByJobId(jobId)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+        // Prefer a COMPLETED payment if one exists — the definitive answer to "is
+        // this job paid?" — otherwise fall back to whatever's there (e.g. PENDING).
+        List<Payment> payments = paymentRepository.findAllByJobId(jobId);
+        if (payments.isEmpty()) {
+            throw new RuntimeException("Payment not found");
+        }
+        Payment payment = payments.stream()
+                .filter(p -> p.getStatus() == Payment.PaymentStatus.COMPLETED)
+                .findFirst()
+                .orElse(payments.get(0));
         return mapToDto(payment);
     }
 
