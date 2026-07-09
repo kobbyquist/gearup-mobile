@@ -23,16 +23,28 @@ export default function WalletPaymentSheet({
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(0);
   const [paying, setPaying] = useState(false);
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setLoading(true);
-      walletService.getWallet()
-        .then(w => setBalance(w.balance))
+      setAlreadyPaid(false);
+      Promise.all([
+        walletService.getWallet(),
+        // A missing/errored lookup just means "not paid yet" — the normal case —
+        // so it's swallowed rather than surfaced as an error.
+        paymentService.getPaymentByJob(jobId).catch(() => null),
+      ])
+        .then(([w, existingPayment]) => {
+          setBalance(w.balance);
+          if (existingPayment && existingPayment.status === 'COMPLETED') {
+            setAlreadyPaid(true);
+          }
+        })
         .catch(() => setBalance(0))
         .finally(() => setLoading(false));
     }
-  }, [visible]);
+  }, [visible, jobId]);
 
   const sufficientBalance = balance >= amount;
 
@@ -49,7 +61,15 @@ export default function WalletPaymentSheet({
       onPaid();
       onClose();
     } catch (e: any) {
-      Alert.alert('Payment Failed', e.message || 'Something went wrong. Please try again.');
+      // The backend's duplicate-payment guard can reject here even if this sheet's
+      // own check missed it (e.g. a stale open sheet) — update the UI immediately
+      // rather than just showing an error and leaving a "Pay" button that will
+      // fail the same way again.
+      if (e.message?.toLowerCase().includes('already been paid')) {
+        setAlreadyPaid(true);
+      } else {
+        Alert.alert('Payment Failed', e.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setPaying(false);
     }
@@ -72,6 +92,13 @@ export default function WalletPaymentSheet({
 
           {loading ? (
             <ActivityIndicator color={accentColor} style={{ marginVertical: SPACING.lg }} />
+          ) : alreadyPaid ? (
+            <View style={styles.shortfallBox}>
+              <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+              <Text style={[styles.shortfallText, { color: '#065f46' }]}>
+                This job has already been paid for.
+              </Text>
+            </View>
           ) : sufficientBalance ? (
             <>
               <Text style={styles.balanceText}>Wallet balance: GHS {balance.toFixed(2)}</Text>

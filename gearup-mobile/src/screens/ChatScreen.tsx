@@ -44,6 +44,10 @@ const formatDuration = (totalSeconds: number): string => {
   const s = Math.floor(totalSeconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
+// Lives outside the component so it survives ChatScreen unmounting/remounting when
+// navigating away and back — plain component state alone gets wiped on unmount.
+// Resets on a full app restart, which is an acceptable scope for this.
+const jobCardExpandedStore: Record<number, boolean> = {};
 // ─── AnimatedActionButton: press-scale wrapper used for all job card action buttons ───
 function AnimatedActionButton({ style, textStyle, icon, iconColor, label, onPress, disabled, loading }: {
   style: any;
@@ -84,7 +88,7 @@ function AnimatedActionButton({ style, textStyle, icon, iconColor, label, onPres
 
 // ─── JobCardBubble: expandable job card rendered inline in the chat ───
 function JobCardBubble({
-  item, isMine, isOwner, myId, accentColor, onActionDone, onPaid, navigation,
+  item, isMine, isOwner, myId, accentColor, onActionDone, onPaid, navigation, expanded, onToggleExpanded,
 }: {
   item: Message;
   isMine: boolean;
@@ -94,8 +98,9 @@ function JobCardBubble({
   onActionDone: (updated: Message) => void;
   onPaid: (jobId: number, mechanicId: number) => void;
   navigation: any;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [declineConfirm, setDeclineConfirm] = useState(false);
   const [proposeModal, setProposeModal] = useState(false);
@@ -344,7 +349,7 @@ function JobCardBubble({
       <Animated.View style={[styles.jobCard, entranceStyle]}>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseOverlayStyle, { borderRadius: 16 }]} />
 
-        <TouchableOpacity style={styles.jobCardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.jobCardHeader} onPress={onToggleExpanded} activeOpacity={0.85}>
           <View style={styles.jobCardHeaderLeft}>
             <Ionicons name="briefcase" size={16} color={accentColor} />
             <Text style={styles.jobCardTitle} numberOfLines={1}>{meta.title}</Text>
@@ -846,6 +851,9 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
   const [sendingPreview, setSendingPreview] = useState(false);
  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deletingMessage, setDeletingMessage] = useState(false);
+  // Keyed by the stable jobId (not the message's own id, which changes every time
+  // sendJobCard deletes-and-reinserts the row) so collapse/expand survives job card updates.
+  const [expandedJobCards, setExpandedJobCards] = useState<Record<number, boolean>>(() => ({ ...jobCardExpandedStore }));
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -878,12 +886,15 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
     try {
       const data = await messageService.getMessages(job.id);
       setMessages(data);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
       await messageService.markAsRead(job.id, myId);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
       setLoading(false);
+      // Scheduled aIt fter setLoading(false) rather than before — the FlatList only
+      // mounts once loading is false, so scrolling it any earlier hits a null ref
+      // and silently does nothing.
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
     }
   };
 
@@ -1132,6 +1143,16 @@ const pickFromLibrary = async () => {
             onActionDone={upsertJobCard}
             onPaid={(jobId, mechanicId) => setReviewTarget({ jobId, mechanicId })}
             navigation={navigation}
+            expanded={expandedJobCards[(item.metadata as JobCardMetadata)?.jobId] ?? true}
+            onToggleExpanded={() => {
+              const jobId = (item.metadata as JobCardMetadata)?.jobId;
+              if (jobId == null) return;
+              setExpandedJobCards(prev => {
+                const next = { ...prev, [jobId]: !(prev[jobId] ?? true) };
+                jobCardExpandedStore[jobId] = next[jobId];
+                return next;
+              });
+            }}
           />
         </>
       );
@@ -1230,7 +1251,6 @@ const pickFromLibrary = async () => {
           </View>
           <View>
             <Text style={styles.headerName}>{otherUserName}</Text>
-            <Text style={styles.headerJob} numberOfLines={1}>{job.title}</Text>
           </View>
         </View>
       </LinearGradient>

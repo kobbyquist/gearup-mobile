@@ -165,7 +165,6 @@ export default function MechanicMessagesScreen({ navigation }: any) {
                       <Text style={styles.convoName}>{convo.otherUserName}</Text>
                       <Text style={styles.convoTime}>{formatTime(convo.created_at)}</Text>
                     </View>
-                    <Text style={styles.convoJob} numberOfLines={1}>{convo.job?.title}</Text>
                     <View style={styles.convoMessageRow}>
                       {convo.sender_id === user?.userId && (
                         <Text style={styles.convoReceipt}>{convo.is_read ? '✓✓' : '✓'}</Text>
