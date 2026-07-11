@@ -15,6 +15,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import OtpScreen from '../screens/auth/OtpScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetNewPasswordScreen from '../screens/auth/ResetNewPasswordScreen';
+import AccountDeletionSubmittedScreen from '../screens/AccountDeletionSubmittedScreen';
 import OwnerTabNavigator from './OwnerTabNavigator';
 import MechanicTabNavigator from './MechanicTabNavigator';
 import DevSettingsScreen from '../screens/DevSettingsScreen';
@@ -71,6 +72,8 @@ export default function Navigation() {
               <Stack.Screen name="SOS" component={OwnerSOSScreen} />
               <Stack.Screen name="Wallet" component={WalletScreen} />
               <Stack.Screen name="TopUp" component={TopUpScreen} />
+              <Stack.Screen name="AccountDeletionSubmitted" component={AccountDeletionSubmittedScreen} />
+              <Stack.Screen name="Otp" component={OtpScreen} />
             </>
           ) : (
             <>
@@ -81,6 +84,8 @@ export default function Navigation() {
               <Stack.Screen name="TopUp" component={TopUpScreen} />
               <Stack.Screen name="BankAccount" component={BankAccountScreen} />
               <Stack.Screen name="Withdraw" component={WithdrawScreen} />
+              <Stack.Screen name="AccountDeletionSubmitted" component={AccountDeletionSubmittedScreen} />
+              <Stack.Screen name="Otp" component={OtpScreen} />
             </>
           )}
         </Stack.Navigator>

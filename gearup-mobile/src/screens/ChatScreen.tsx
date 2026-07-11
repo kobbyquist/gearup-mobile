@@ -12,6 +12,8 @@ import {
   useAudioRecorder, useAudioPlayer, useAudioPlayerStatus,
   AudioModule, RecordingPresets, setAudioModeAsync,
 } from 'expo-audio';
+import CreateJobModal from '../components/CreateJobModal';
+import { vehicleService } from '../services/vehicleService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { messageService, Message, JobCardMetadata, AttachmentMetadata } from '../services/messageService';
@@ -88,7 +90,7 @@ function AnimatedActionButton({ style, textStyle, icon, iconColor, label, onPres
 
 // ─── JobCardBubble: expandable job card rendered inline in the chat ───
 function JobCardBubble({
-  item, isMine, isOwner, myId, accentColor, onActionDone, onPaid, navigation, expanded, onToggleExpanded,
+  item, isMine, isOwner, myId, accentColor, onActionDone, onPaid, navigation, expanded, onToggleExpanded, onRequestDelete,
 }: {
   item: Message;
   isMine: boolean;
@@ -100,7 +102,8 @@ function JobCardBubble({
   navigation: any;
   expanded: boolean;
   onToggleExpanded: () => void;
-}) {
+  onRequestDelete: () => void;
+}){
   const [processing, setProcessing] = useState(false);
   const [declineConfirm, setDeclineConfirm] = useState(false);
   const [proposeModal, setProposeModal] = useState(false);
@@ -111,7 +114,8 @@ function JobCardBubble({
   const [cardAlert, setCardAlert] = useState<{ title: string; message: string } | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [finalCostInput, setFinalCostInput] = useState('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cancelJobConfirm, setCancelJobConfirm] = useState(false);
   const [bidModal, setBidModal] = useState(false);
   const [bidCostInput, setBidCostInput] = useState('');
   const [bidNoteInput, setBidNoteInput] = useState('');
@@ -135,8 +139,8 @@ function JobCardBubble({
     prevStatusRef.current = meta.status;
   }, [meta?.status]);
 
-  if (!meta) return null;
-
+ if (!meta) return null;
+  const isDeletableCard = meta.status === 'CANCELLED' || (meta.status === 'COMPLETED' && !!meta.isPaid);
   const isPendingOriginal = meta.status === 'PENDING' && !meta.proposedByMechanicId;
   const isPendingCounter = meta.status === 'PENDING' && !!meta.proposedByMechanicId;
   const mechanicCanRespond = !isOwner && isPendingOriginal;
@@ -169,7 +173,18 @@ function JobCardBubble({
       setProcessing(false);
     }
   };
-
+const handleCancelJob = async () => {
+    setCancelJobConfirm(false);
+    setProcessing(true);
+    try {
+      await jobService.cancelJob(meta.jobId);
+      await pushCardUpdate({ ...meta, status: 'CANCELLED' });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Cancel', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
   const handleDecline = async () => {
     setDeclineConfirm(false);
     setProcessing(true);
@@ -349,7 +364,11 @@ function JobCardBubble({
       <Animated.View style={[styles.jobCard, entranceStyle]}>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseOverlayStyle, { borderRadius: 16 }]} />
 
-        <TouchableOpacity style={styles.jobCardHeader} onPress={onToggleExpanded} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.jobCardHeader}
+          onPress={onToggleExpanded}
+          onLongPress={isOwner && isDeletableCard ? onRequestDelete : undefined}
+          activeOpacity={0.85}>
           <View style={styles.jobCardHeaderLeft}>
             <Ionicons name="briefcase" size={16} color={accentColor} />
             <Text style={styles.jobCardTitle} numberOfLines={1}>{meta.title}</Text>
@@ -413,6 +432,19 @@ function JobCardBubble({
             )}
             {ownerAwaitingMechanic && (
               <Text style={styles.awaitingText}>Waiting for the mechanic to respond…</Text>
+            )}
+            {isOwner && meta.status === 'PENDING' && (
+              <View style={styles.jobCardActionsFullRow}>
+                <AnimatedActionButton
+                  style={styles.declineBtn}
+                  textStyle={styles.declineBtnText}
+                  icon="close-circle-outline"
+                  iconColor="#dc2626"
+                  label="Cancel Job"
+                  onPress={() => setCancelJobConfirm(true)}
+                  disabled={processing}
+                />
+              </View>
             )}
 
             {mechanicCanRespond && (
@@ -716,7 +748,17 @@ function JobCardBubble({
           onConfirm={handleDecline}
           onCancel={() => setDeclineConfirm(false)}
         />
-
+<ConfirmDialog
+          visible={cancelJobConfirm}
+          icon="close-circle-outline"
+          title="Cancel Job"
+          message={`Are you sure you want to cancel "${meta.title}"?`}
+          confirmText="Yes, Cancel"
+          cancelText="No"
+          destructive
+          onConfirm={handleCancelJob}
+          onCancel={() => setCancelJobConfirm(false)}
+        />
         <Modal visible={!!cardAlert} transparent animationType="fade" onRequestClose={() => setCardAlert(null)}>
           <View style={styles.cardOverlay}>
             {cardAlert && (
@@ -860,6 +902,8 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
   const [pendingAudioUri, setPendingAudioUri] = useState<string | null>(null);
   const [pendingAudioDuration, setPendingAudioDuration] = useState(0);
   const [sendingAudio, setSendingAudio] = useState(false);
+  const [createJobModalVisible, setCreateJobModalVisible] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const flatListRef = useRef<FlatList>(null);
   const channelRef = useRef<any>(null);
@@ -999,6 +1043,17 @@ const pickFromLibrary = async () => {
       Alert.alert('Error', e.message || 'Could not send photo. Please try again.');
     } finally {
       setSendingPreview(false);
+    }
+  };
+  const openCreateJob = async () => {
+    setCreateJobModalVisible(true);
+    if (vehicles.length === 0) {
+      try {
+        const data = await vehicleService.getMyVehicles();
+        setVehicles(data);
+      } catch {
+        // If this fails, CreateJobModal's own "no vehicles" state will show — not fatal
+      }
     }
   };
   const startRecording = async () => {
@@ -1143,6 +1198,7 @@ const pickFromLibrary = async () => {
             onActionDone={upsertJobCard}
             onPaid={(jobId, mechanicId) => setReviewTarget({ jobId, mechanicId })}
             navigation={navigation}
+            onRequestDelete={() => setDeleteTarget(item.id)}
             expanded={expandedJobCards[(item.metadata as JobCardMetadata)?.jobId] ?? true}
             onToggleExpanded={() => {
               const jobId = (item.metadata as JobCardMetadata)?.jobId;
@@ -1361,6 +1417,12 @@ const pickFromLibrary = async () => {
                   </View>
                   <Text style={styles.attachMenuText}>Voice Note</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.attachMenuOption} onPress={() => { setAttachMenuVisible(false); openCreateJob(); }}>
+                  <View style={[styles.attachMenuIconWrap, { backgroundColor: '#f5f3ff' }]}>
+                    <Ionicons name="briefcase" size={20} color="#7c3aed" />
+                  </View>
+                  <Text style={styles.attachMenuText}>New Job</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </Modal>
@@ -1410,7 +1472,14 @@ const pickFromLibrary = async () => {
             onConfirm={handleDeleteMessage}
             onCancel={() => setDeleteTarget(null)}
           />
-
+<CreateJobModal
+            visible={createJobModalVisible}
+            onClose={() => setCreateJobModalVisible(false)}
+            vehicles={vehicles}
+            userId={myId}
+            lockedMechanic={{ id: otherUserId, name: otherUserName }}
+            onCreated={() => { /* the job card is already sent into this chat by CreateJobModal itself */ }}
+          />
           <Modal visible={!!pendingAudioUri} transparent animationType="fade" onRequestClose={cancelAudioPreview}>
             <View style={styles.audioPreviewOverlay}>
               <View style={styles.audioPreviewCard}>
