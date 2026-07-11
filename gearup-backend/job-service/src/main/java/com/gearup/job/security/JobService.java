@@ -29,6 +29,7 @@ public class JobService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .estimatedCost(request.getEstimatedCost())
+                .scheduledDate(request.getScheduledDate())
                 .build();
 
         return mapToDto(jobRepository.save(job));
@@ -135,6 +136,7 @@ public class JobService {
                 .location(job.getLocation())
                 .latitude(job.getLatitude())
                 .longitude(job.getLongitude())
+                .scheduledDate(job.getScheduledDate())
                 .status(job.getStatus())
                 .type(job.getType())
                 .estimatedCost(job.getEstimatedCost())

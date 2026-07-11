@@ -20,6 +20,7 @@ public class JobDto {
     private String location;
     private Double latitude;
     private Double longitude;
+    private LocalDateTime scheduledDate;
     private JobStatus status;
     private JobType type;
     private Double estimatedCost;

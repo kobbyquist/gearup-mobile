@@ -35,6 +35,9 @@ public class Job {
     private Double latitude;
     private Double longitude;
 
+    @Column(name = "scheduled_date")
+    private LocalDateTime scheduledDate;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
