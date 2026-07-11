@@ -5,13 +5,26 @@ export interface Message {
   sender_id: number;
   receiver_id: number;
   content: string;
-  message_type: 'text' | 'job_card' | 'image' | 'audio';
-  metadata: JobCardMetadata | AttachmentMetadata | null;
+  message_type: 'text' | 'job_card' | 'image' | 'audio' | 'part_card';
+  metadata: JobCardMetadata | AttachmentMetadata | PartCardMetadata | null;
   created_at: string;
   is_read: boolean;
 }
 export interface AttachmentMetadata {
   durationSeconds?: number;
+}
+export interface PartCardMetadata {
+  orderId: number;
+  partId: number;
+  partName: string;
+  imageUrl?: string | null;
+  price: number;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED' | 'COMPLETED';
+  buyerId: number;
+  sellerId: number;
+  proposedPrice?: number | null;
+  proposedByUserId?: number | null;
+  isPaid?: boolean;
 }
 export interface JobCardMetadata {
   jobId: number;
@@ -48,6 +61,22 @@ const buildJobCardSummary = (meta: JobCardMetadata): string => {
       return `❌ Job cancelled: ${meta.title}`;
     default:
       return `📋 Job update: ${meta.title}`;
+  }
+};
+const buildPartCardSummary = (meta: PartCardMetadata): string => {
+  switch (meta.status) {
+    case 'PENDING':
+      return meta.proposedByUserId ? `💬 Price offer: ${meta.partName}` : `🛒 Order Request: ${meta.partName}`;
+    case 'ACCEPTED':
+      return `✅ Reserved: ${meta.partName}`;
+    case 'DECLINED':
+      return `❌ Order declined: ${meta.partName}`;
+    case 'CANCELLED':
+      return `❌ Order cancelled: ${meta.partName}`;
+    case 'COMPLETED':
+      return meta.isPaid ? `💰 Paid: ${meta.partName}` : `✔️ Sold: ${meta.partName}`;
+    default:
+      return `🛒 Order update: ${meta.partName}`;
   }
 };
 const ATTACHMENTS_BUCKET = 'chat-attachments';
@@ -114,7 +143,6 @@ export const messageService = {
       .eq('job_id', chatJobId)
       .eq('message_type', 'job_card')
       .contains('metadata', { jobId: meta.jobId });
-
     const { data, error } = await supabase
       .from('messages')
       .insert([{
@@ -127,11 +155,33 @@ export const messageService = {
       }])
       .select()
       .single();
-
     if (error) throw new Error(error.message);
     return data;
   },
-
+  // Mirrors sendJobCard, matched on orderId instead of jobId — deletes any prior
+  // part_card row for this order within the thread so only the latest state shows.
+  sendPartCard: async (chatJobId: number, senderId: number, receiverId: number, meta: PartCardMetadata): Promise<Message> => {
+    await supabase
+      .from('messages')
+      .delete()
+      .eq('job_id', chatJobId)
+      .eq('message_type', 'part_card')
+      .contains('metadata', { orderId: meta.orderId });
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([{
+        job_id: chatJobId,
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content: buildPartCardSummary(meta),
+        message_type: 'part_card',
+        metadata: meta,
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
   getMessages: async (jobId: number): Promise<Message[]> => {
     const { data, error } = await supabase
       .from('messages')
