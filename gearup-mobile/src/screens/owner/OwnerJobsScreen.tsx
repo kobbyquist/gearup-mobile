@@ -16,6 +16,7 @@ import { reviewService } from '../../services/reviewService';
 import { locationService } from '../../services/locationService';
 import { userService } from '../../services/userService';
 import { messageService, JobCardMetadata } from '../../services/messageService';
+import { useFocusEffect } from '@react-navigation/native';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { AppAlertCard } from '../../components/AppAlert';
 import WalletPaymentSheet from '../../components/WalletPaymentSheet';
@@ -100,7 +101,8 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const isDeletable = (job: any) => job.status === 'CANCELLED' || job.status === 'COMPLETED';
+const isDeletable = (job: any, paidJobs: number[]) =>
+  job.status === 'CANCELLED' || (job.status === 'COMPLETED' && paidJobs.includes(job.id));
 
 // ─── JobCard: its own component so hooks (entrance animation) are safe/stable ───
 function JobCard({
@@ -233,7 +235,7 @@ function JobCard({
             <Text style={styles.paidText}>Paid</Text>
           </View>
         )}
-        {isDeletable(job) && (
+        {isDeletable(job, paidJobs) && (
           <View style={styles.swipeHint}>
             <Ionicons name="chevron-back" size={11} color="#d1d5db" />
             <Text style={styles.swipeHintText}>Swipe to delete</Text>
@@ -242,8 +244,7 @@ function JobCard({
       </View>
     </Animated.View>
   );
-
-  if (isDeletable(job)) {
+  if (isDeletable(job, paidJobs)) {
     return (
       <Swipeable
         ref={(ref) => { swipeableRef.current = ref; }}
@@ -375,9 +376,16 @@ export default function OwnerJobsScreen({ navigation }: any) {
   };
 
   useEffect(() => {
-    fetchData();
     Animated.timing(enterAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
+  // Refetches every time this tab regains focus (not just on first mount), so job-card
+  // updates made elsewhere — like a payment completed inside a chat — show up here
+  // without needing a manual pull-to-refresh.
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
   const loadMechanics = async () => {

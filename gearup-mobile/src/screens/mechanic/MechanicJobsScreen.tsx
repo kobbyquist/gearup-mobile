@@ -12,6 +12,7 @@ import { jobService } from '../../services/jobService';
 import { paymentService } from '../../services/paymentService';
 import { userService } from '../../services/userService';
 import { messageService, JobCardMetadata } from '../../services/messageService';
+import { useFocusEffect } from '@react-navigation/native';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
@@ -242,9 +243,15 @@ export default function MechanicJobsScreen({ navigation }: any) {
   };
 
   useEffect(() => {
-    fetchJobs();
     Animated.timing(enterAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
+  // Refetches every time this tab regains focus, so job-card updates made elsewhere
+  // (like a payment completed inside a chat) show up here automatically.
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchJobs();
+    }, [])
+  );
   const onRefresh = () => { setRefreshing(true); fetchJobs(); };
 
   // Pushes the current job state into the shared chat thread's job card,
