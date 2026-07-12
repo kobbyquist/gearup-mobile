@@ -3,6 +3,7 @@ package com.gearup.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "users")
@@ -38,6 +39,15 @@ public class User {
     private String location;
     private Double latitude;
     private Double longitude;
+
+    @Column(name = "accepting_bookings")
+    private Boolean acceptingBookings;
+
+    @Column(name = "availability_start")
+    private LocalTime availabilityStart;
+
+    @Column(name = "availability_end")
+    private LocalTime availabilityEnd;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

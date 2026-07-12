@@ -40,6 +40,9 @@ public class UserService {
         if (request.getLocation() != null) user.setLocation(request.getLocation());
         if (request.getLatitude() != null) user.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) user.setLongitude(request.getLongitude());
+        if (request.getAcceptingBookings() != null) user.setAcceptingBookings(request.getAcceptingBookings());
+        if (request.getAvailabilityStart() != null) user.setAvailabilityStart(request.getAvailabilityStart());
+        if (request.getAvailabilityEnd() != null) user.setAvailabilityEnd(request.getAvailabilityEnd());
 
         User saved = userRepository.save(user);
         return mapToDto(saved);
@@ -63,6 +66,9 @@ public class UserService {
             .latitude(user.getLatitude())
             .longitude(user.getLongitude())
             .role(user.getRole())
+            .acceptingBookings(Boolean.TRUE.equals(user.getAcceptingBookings()))
+            .availabilityStart(user.getAvailabilityStart())
+            .availabilityEnd(user.getAvailabilityEnd())
             .build();
 }
 }
