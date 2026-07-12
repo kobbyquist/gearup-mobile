@@ -43,8 +43,10 @@ public class JobController {
     }
 
     @GetMapping("/available")
-    public ResponseEntity<List<JobDto>> getAvailableJobs() {
-        return ResponseEntity.ok(jobService.getAvailableJobs());
+    public ResponseEntity<List<JobDto>> getAvailableJobs(
+            @RequestHeader("Authorization") String authHeader) {
+        Long mechanicId = extractUserId(authHeader);
+        return ResponseEntity.ok(jobService.getAvailableJobs(mechanicId));
     }
 
     @GetMapping("/{id}")

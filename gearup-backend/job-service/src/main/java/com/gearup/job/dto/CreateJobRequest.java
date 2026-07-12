@@ -1,6 +1,7 @@
 package com.gearup.job.dto;
 
 import com.gearup.job.entity.Job.JobType;
+import com.gearup.job.entity.Job.RequestType;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -28,4 +29,6 @@ public class CreateJobRequest {
     private Double longitude;
     private Double estimatedCost;
     private LocalDateTime scheduledDate;
+    private RequestType requestType;
+    private Long preferredMechanicId;
 }

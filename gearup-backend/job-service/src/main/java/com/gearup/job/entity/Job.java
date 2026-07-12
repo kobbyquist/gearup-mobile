@@ -47,6 +47,14 @@ public class Job {
     @Column(nullable = false)
     private JobType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_type")
+    @Builder.Default
+    private RequestType requestType = RequestType.GENERAL;
+
+    @Column(name = "preferred_mechanic_id")
+    private Long preferredMechanicId;
+
     private Double estimatedCost;
     private Double finalCost;
 
@@ -70,5 +78,9 @@ public class Job {
 
     public enum JobType {
         TOWING, BATTERY, TIRE_CHANGE, FUEL, ENGINE, GENERAL
+    }
+
+    public enum RequestType {
+        GENERAL, DIRECT
     }
 }

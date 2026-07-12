@@ -4,6 +4,7 @@ import com.gearup.job.dto.CreateJobRequest;
 import com.gearup.job.dto.JobDto;
 import com.gearup.job.entity.Job;
 import com.gearup.job.entity.Job.JobStatus;
+import com.gearup.job.entity.Job.RequestType;
 import com.gearup.job.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,8 @@ public class JobService {
                 .longitude(request.getLongitude())
                 .estimatedCost(request.getEstimatedCost())
                 .scheduledDate(request.getScheduledDate())
+                .requestType(request.getRequestType() != null ? request.getRequestType() : RequestType.GENERAL)
+                .preferredMechanicId(request.getPreferredMechanicId())
                 .build();
 
         return mapToDto(jobRepository.save(job));
@@ -45,9 +48,12 @@ public class JobService {
                 .stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public List<JobDto> getAvailableJobs() {
+    public List<JobDto> getAvailableJobs(Long mechanicId) {
         return jobRepository.findByStatus(JobStatus.PENDING)
-                .stream().map(this::mapToDto).collect(Collectors.toList());
+                .stream()
+                .filter(job -> job.getRequestType() != RequestType.DIRECT
+                        || (job.getPreferredMechanicId() != null && job.getPreferredMechanicId().equals(mechanicId)))
+                .map(this::mapToDto).collect(Collectors.toList());
     }
 
     public JobDto getJobById(Long jobId) {
@@ -61,6 +67,12 @@ public class JobService {
 
         if (job.getStatus() != JobStatus.PENDING) {
             throw new RuntimeException("Job is not available");
+        }
+
+        if (job.getRequestType() == RequestType.DIRECT
+                && job.getPreferredMechanicId() != null
+                && !job.getPreferredMechanicId().equals(mechanicId)) {
+            throw new RuntimeException("This job was requested for a specific mechanic");
         }
 
         job.setMechanicId(mechanicId);
@@ -98,20 +110,20 @@ public class JobService {
     }
 
     public JobDto updateFinalCost(Long jobId, Long mechanicId, Double newCost) {
-    Job job = jobRepository.findById(jobId)
-            .orElseThrow(() -> new RuntimeException("Job not found"));
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found"));
 
-    if (!job.getMechanicId().equals(mechanicId)) {
-        throw new RuntimeException("Unauthorized");
+        if (!job.getMechanicId().equals(mechanicId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (job.getStatus() != JobStatus.COMPLETED) {
+            throw new RuntimeException("Can only edit cost on completed jobs");
+        }
+
+        job.setFinalCost(newCost);
+        return mapToDto(jobRepository.save(job));
     }
-
-    if (job.getStatus() != JobStatus.COMPLETED) {
-        throw new RuntimeException("Can only edit cost on completed jobs");
-    }
-
-    job.setFinalCost(newCost);
-    return mapToDto(jobRepository.save(job));
-}
 
     public JobDto cancelJob(Long jobId, Long ownerId) {
         Job job = jobRepository.findById(jobId)
@@ -139,6 +151,8 @@ public class JobService {
                 .scheduledDate(job.getScheduledDate())
                 .status(job.getStatus())
                 .type(job.getType())
+                .requestType(job.getRequestType())
+                .preferredMechanicId(job.getPreferredMechanicId())
                 .estimatedCost(job.getEstimatedCost())
                 .finalCost(job.getFinalCost())
                 .createdAt(job.getCreatedAt())
