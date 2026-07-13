@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, RefreshControl, ActivityIndicator, Alert, Animated, Dimensions, FlatList
+  StatusBar, RefreshControl, ActivityIndicator, Alert, Animated, Dimensions, FlatList, Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { RootState } from '../../store';
 import { jobService } from '../../services/jobService';
 import { vehicleService } from '../../services/vehicleService';
 import { paymentService } from '../../services/paymentService';
+import { userService } from '../../services/userService';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -50,7 +51,8 @@ export default function OwnerHomeScreen({ navigation }: any) {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [updates, setUpdates] = useState<UpdateCardData[]>([]);
+const [updates, setUpdates] = useState<UpdateCardData[]>([]);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [updateIndex, setUpdateIndex] = useState(0);
   const enterAnim = useRef(new Animated.Value(0)).current;
   const updateListRef = useRef<FlatList>(null);
@@ -142,15 +144,17 @@ export default function OwnerHomeScreen({ navigation }: any) {
 
   const fetchData = async () => {
     try {
-      const [jobsData, vehiclesData] = await Promise.all([
+      const [jobsData, vehiclesData, profileData] = await Promise.all([
         jobService.getMyJobsAsOwner(),
         vehicleService.getMyVehicles(),
+        userService.getMyProfile().catch(() => null),
       ]);
       const sorted = [...jobsData].sort((a: any, b: any) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setJobs(sorted);
       setVehicles(vehiclesData);
+      if (profileData) setProfileImage(profileData.profileImage || null);
 
       const cards = await buildUpdates(sorted, vehiclesData);
       setUpdates(cards);
@@ -225,11 +229,16 @@ export default function OwnerHomeScreen({ navigation }: any) {
             <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 👋</Text>
             <Text style={styles.subGreeting}>What do you need help with today?</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
-          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.85}>
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
-
         <TouchableOpacity
           style={styles.sosButton}
           activeOpacity={0.85}
@@ -419,6 +428,7 @@ const styles = StyleSheet.create({
   greeting: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#ffffff' },
   subGreeting: { fontSize: FONT_SIZES.sm, color: '#86efac', marginTop: 2 },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#fbbf24', justifyContent: 'center', alignItems: 'center' },
+  avatarImage: { width: 46, height: 46, borderRadius: 23 },
   avatarText: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: '#1b4332' },
   sosButton: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, backgroundColor: 'rgba(220,38,38,0.18)', borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   sosIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
