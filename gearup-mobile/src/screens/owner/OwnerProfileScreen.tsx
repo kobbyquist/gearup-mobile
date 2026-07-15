@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, ActivityIndicator, TextInput, Modal, Platform, Animated
+  StatusBar, ActivityIndicator, TextInput, Modal, Platform, Animated, Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,6 +13,7 @@ import { logout } from '../../store/slices/authSlice';
 import { userService } from '../../services/userService';
 import { vehicleService } from '../../services/vehicleService';
 import { authService } from '../../services/authService';
+import { partsService } from '../../services/partsService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
@@ -105,7 +107,10 @@ export default function OwnerProfileScreen({ navigation }: any) {
   const [detailModal, setDetailModal] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [editingVehicleId, setEditingVehicleId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', bio: '', location: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', bio: '', location: '', profileImage: null as string | null });
+  const [avatarMenuVisible, setAvatarMenuVisible] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const pendingAvatarActionRef = useRef<(() => void) | null>(null);
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
   const [activeDateField, setActiveDateField] = useState<'lastServicedDate' | 'insuranceExpiry' | 'roadworthyExpiry' | null>(null);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -130,6 +135,7 @@ export default function OwnerProfileScreen({ navigation }: any) {
         phone: profileData.phone || '',
         bio: profileData.bio || '',
         location: profileData.location || '',
+        profileImage: profileData.profileImage || null,
       });
     } catch (error: any) {
       setAlert({ type: 'error', title: 'Error', message: error.message });
@@ -159,12 +165,65 @@ export default function OwnerProfileScreen({ navigation }: any) {
   );
   const handleUpdateProfile = async () => {
     try {
-      await userService.updateProfile(editForm);
+      await userService.updateProfile(editForm as any);
       setEditModal(false);
       fetchData();
       setAlert({ type: 'success', title: 'Success', message: 'Profile updated!' });
     } catch (error: any) {
       setAlert({ type: 'error', title: 'Error', message: error.message });
+    }
+  };
+
+  const uploadAvatarUri = async (uri: string) => {
+    setUploadingAvatar(true);
+    try {
+      const imageUrl = await partsService.uploadImage(uri);
+      setEditForm(prev => ({ ...prev, profileImage: imageUrl }));
+    } catch (e: any) {
+      setAlert({ type: 'error', title: 'Upload Failed', message: e.message || 'Could not upload image. Please try again.' });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+  const pickAvatarFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setAlert({ type: 'warning', title: 'Permission needed', message: 'Please allow photo access to set a profile picture.' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    uploadAvatarUri(result.assets[0].uri);
+  };
+  const takeAvatarPhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setAlert({ type: 'warning', title: 'Permission needed', message: 'Please allow camera access to take a photo.' });
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    uploadAvatarUri(result.assets[0].uri);
+  };
+  const triggerAvatarAction = (action: () => void) => {
+    pendingAvatarActionRef.current = action;
+    setAvatarMenuVisible(false);
+    if (Platform.OS === 'android') {
+      setTimeout(() => {
+        const pending = pendingAvatarActionRef.current;
+        pendingAvatarActionRef.current = null;
+        if (pending) pending();
+      }, 300);
     }
   };
   const openAddVehicle = () => {
@@ -278,9 +337,13 @@ export default function OwnerProfileScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient colors={['#1b4332', '#2d6a4f']} style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{profile?.name?.[0]?.toUpperCase()}</Text>
-          </View>
+          {profile?.profileImage ? (
+            <Image source={{ uri: profile.profileImage }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{profile?.name?.[0]?.toUpperCase()}</Text>
+            </View>
+          )}
           <Text style={styles.name}>{profile?.name}</Text>
           <Text style={styles.email}>{profile?.email}</Text>
           {profile?.bio && <Text style={styles.bio}>{profile.bio}</Text>}
@@ -386,6 +449,51 @@ export default function OwnerProfileScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody}>
+            <TouchableOpacity style={styles.avatarPickerBtn} onPress={() => setAvatarMenuVisible(true)} disabled={uploadingAvatar}>
+              {editForm.profileImage ? (
+                <Image source={{ uri: editForm.profileImage }} style={styles.avatarPickerImage} />
+              ) : (
+                <View style={styles.avatarPickerPlaceholder}>
+                  <Ionicons name="camera-outline" size={26} color="#1b4332" />
+                </View>
+              )}
+              {uploadingAvatar ? (
+                <View style={styles.avatarUploadingOverlay}>
+                  <ActivityIndicator color="#fff" />
+                </View>
+              ) : (
+                <View style={styles.avatarEditBadge}>
+                  <Ionicons name="pencil" size={12} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <Modal
+              visible={avatarMenuVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setAvatarMenuVisible(false)}
+              onDismiss={() => {
+                const action = pendingAvatarActionRef.current;
+                pendingAvatarActionRef.current = null;
+                if (action) action();
+              }}>
+              <TouchableOpacity style={styles.avatarMenuOverlay} activeOpacity={1} onPress={() => setAvatarMenuVisible(false)}>
+                <View style={styles.avatarMenu}>
+                  <TouchableOpacity style={styles.avatarMenuOption} onPress={() => triggerAvatarAction(takeAvatarPhoto)}>
+                    <View style={[styles.avatarMenuIconWrap, { backgroundColor: '#f0fdf4' }]}>
+                      <Ionicons name="camera" size={20} color="#10b981" />
+                    </View>
+                    <Text style={styles.avatarMenuText}>Take Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.avatarMenuOption} onPress={() => triggerAvatarAction(pickAvatarFromLibrary)}>
+                    <View style={[styles.avatarMenuIconWrap, { backgroundColor: '#eff6ff' }]}>
+                      <Ionicons name="image" size={20} color="#2563eb" />
+                    </View>
+                    <Text style={styles.avatarMenuText}>Choose Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </Modal>
             <Text style={styles.label}>Name</Text>
             <TextInput style={styles.input} value={editForm.name} onChangeText={t => setEditForm({ ...editForm, name: t })} />
             <Text style={styles.label}>Phone</Text>
@@ -626,6 +734,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: { paddingTop: 60, paddingBottom: SPACING.xl, alignItems: 'center', gap: SPACING.sm, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fbbf24', justifyContent: 'center', alignItems: 'center' },
+  avatarImage: { width: 80, height: 80, borderRadius: 40 },
   avatarText: { fontSize: 32, fontWeight: '700', color: '#1b4332' },
   name: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#fff' },
   email: { fontSize: FONT_SIZES.sm, color: '#86efac' },
@@ -699,4 +808,14 @@ const styles = StyleSheet.create({
   deleteVehicleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: SPACING.md, padding: 14, backgroundColor: '#fef2f2', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#fecaca' },
   deleteVehicleBtnText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#dc2626' },
   alertOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  avatarPickerBtn: { alignSelf: 'center', width: 84, height: 84, marginBottom: SPACING.md },
+  avatarPickerImage: { width: 84, height: 84, borderRadius: 42 },
+  avatarPickerPlaceholder: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#f0fdf4', borderWidth: 1.5, borderColor: '#86efac', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  avatarUploadingOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 42, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: '#1b4332', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  avatarMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' },
+  avatarMenu: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingVertical: SPACING.md, paddingBottom: 40 },
+  avatarMenuOption: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  avatarMenuIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  avatarMenuText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#1b1b1b' },
 });
