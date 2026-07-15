@@ -237,12 +237,16 @@ export default function OwnerSearchScreen({ navigation }: any) {
         chatTitle = `Order: ${order.partName}`;
       }
 
-      await messageService.sendMessage(
-        chatJobId,
-        user?.userId,
-        order.sellerId,
-        `🛒 New Order Request\n\nPart: ${order.partName}\nPrice: GHS ${order.price}\n\nHi! I'd like to buy this part. Please confirm availability and let me know about pickup/delivery.`
-      );
+      await messageService.sendPartCard(chatJobId, user?.userId, order.sellerId, {
+        orderId: order.id,
+        partId: selectedPart.id,
+        partName: order.partName,
+        imageUrl: selectedPart.imageUrl || null,
+        price: order.price,
+        status: order.status,
+        buyerId: user?.userId,
+        sellerId: order.sellerId,
+      });
 
       setMyOrderedPartIds(prev => [...prev, selectedPart.id]);
       setSelectedPart(null);
