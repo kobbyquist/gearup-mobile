@@ -1,6 +1,7 @@
 package com.gearup.parts.controller;
 
 import com.gearup.parts.dto.CreateSparePartRequest;
+import com.gearup.parts.dto.PartOrderDto;
 import com.gearup.parts.dto.SparePartDto;
 import com.gearup.parts.security.JwtService;
 import com.gearup.parts.service.SparePartService;
@@ -8,8 +9,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import com.gearup.parts.dto.PartOrderDto;
 
 @RestController
 @RequestMapping("/api/parts")
@@ -25,6 +33,51 @@ public class SparePartController {
             @Valid @RequestBody CreateSparePartRequest request) {
         Long sellerId = extractUserId(authHeader);
         return ResponseEntity.ok(sparePartService.createListing(sellerId, request));
+    }
+
+    @PostMapping("/{id}/order")
+    public ResponseEntity<PartOrderDto> createOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long id) {
+        Long buyerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.createOrder(buyerId, id));
+    }
+
+    @GetMapping("/orders/my")
+    public ResponseEntity<List<PartOrderDto>> getMyOrders(
+            @RequestHeader("Authorization") String authHeader) {
+        Long buyerId = extractUserId(authHeader);
+        return ResponseEntity.ok(sparePartService.getMyOrders(buyerId));
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, String>> uploadImage(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        extractUserId(authHeader); // just verifying the token is valid
+
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+
+        String uploadsDir = new File("uploads").getAbsolutePath();
+        File dir = new File(uploadsDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        String extension = "";
+        String originalName = file.getOriginalFilename();
+        if (originalName != null && originalName.contains(".")) {
+            extension = originalName.substring(originalName.lastIndexOf("."));
+        }
+        String filename = UUID.randomUUID().toString() + extension;
+
+        File dest = new File(dir, filename);
+        file.transferTo(dest.getAbsoluteFile());
+
+        String imageUrl = "/uploads/" + filename;
+        return ResponseEntity.ok(Map.of("imageUrl", imageUrl));
     }
 
     @GetMapping("/available")

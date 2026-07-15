@@ -22,4 +22,5 @@ public class CreateSparePartRequest {
     private String carMake;
     private String carModel;
     private String condition;
+    private String imageUrl;
 }

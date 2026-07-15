@@ -26,6 +26,11 @@ public class VehicleService {
                 .color(request.getColor())
                 .description(request.getDescription())
                 .type(request.getType() != null ? request.getType() : Vehicle.VehicleType.CAR)
+                .lastServicedDate(request.getLastServicedDate())
+                .mileage(request.getMileage())
+                .insuranceExpiry(request.getInsuranceExpiry())
+                .roadworthyExpiry(request.getRoadworthyExpiry())
+                .notes(request.getNotes())
                 .build();
 
         Vehicle saved = vehicleRepository.save(vehicle);
@@ -60,6 +65,11 @@ public class VehicleService {
         if (request.getColor() != null) vehicle.setColor(request.getColor());
         if (request.getDescription() != null) vehicle.setDescription(request.getDescription());
         if (request.getType() != null) vehicle.setType(request.getType());
+        if (request.getLastServicedDate() != null) vehicle.setLastServicedDate(request.getLastServicedDate());
+        if (request.getMileage() != null) vehicle.setMileage(request.getMileage());
+        if (request.getInsuranceExpiry() != null) vehicle.setInsuranceExpiry(request.getInsuranceExpiry());
+        if (request.getRoadworthyExpiry() != null) vehicle.setRoadworthyExpiry(request.getRoadworthyExpiry());
+        if (request.getNotes() != null) vehicle.setNotes(request.getNotes());
 
         Vehicle saved = vehicleRepository.save(vehicle);
         return mapToDto(saved);
@@ -87,6 +97,11 @@ public class VehicleService {
                 .color(vehicle.getColor())
                 .description(vehicle.getDescription())
                 .type(vehicle.getType())
+                .lastServicedDate(vehicle.getLastServicedDate())
+                .mileage(vehicle.getMileage())
+                .insuranceExpiry(vehicle.getInsuranceExpiry())
+                .roadworthyExpiry(vehicle.getRoadworthyExpiry())
+                .notes(vehicle.getNotes())
                 .build();
     }
 }

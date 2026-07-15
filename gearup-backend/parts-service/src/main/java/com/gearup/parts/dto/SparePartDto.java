@@ -19,6 +19,7 @@ public class SparePartDto {
     private String carMake;
     private String carModel;
     private String condition;
+    private String imageUrl;
     private PartStatus status;
     private LocalDateTime createdAt;
 }

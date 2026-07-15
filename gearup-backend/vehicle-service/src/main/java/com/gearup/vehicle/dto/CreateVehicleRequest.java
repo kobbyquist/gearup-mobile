@@ -3,6 +3,7 @@ package com.gearup.vehicle.dto;
 import com.gearup.vehicle.entity.Vehicle.VehicleType;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -25,4 +26,9 @@ public class CreateVehicleRequest {
     private String color;
     private String description;
     private VehicleType type;
+    private LocalDate lastServicedDate;
+    private Integer mileage;
+    private LocalDate insuranceExpiry;
+    private LocalDate roadworthyExpiry;
+    private String notes;
 }

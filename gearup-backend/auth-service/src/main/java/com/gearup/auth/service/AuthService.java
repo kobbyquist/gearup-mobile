@@ -1,7 +1,9 @@
 package com.gearup.auth.service;
 
 import com.gearup.auth.dto.*;
+import com.gearup.auth.entity.PasswordResetToken;
 import com.gearup.auth.entity.User;
+import com.gearup.auth.repository.PasswordResetTokenRepository;
 import com.gearup.auth.repository.UserRepository;
 import com.gearup.auth.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -9,14 +11,21 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
-public class AuthService { 
+public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final MailService mailService;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -66,5 +75,42 @@ public class AuthService {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .build();
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+            PasswordResetToken resetToken = PasswordResetToken.builder()
+                    .token(code)
+                    .userId(user.getId())
+                    .expiresAt(LocalDateTime.now().plusMinutes(15))
+                    .build();
+            passwordResetTokenRepository.save(resetToken);
+            mailService.sendPasswordResetEmail(user.getEmail(), user.getName(), code);
+        });
+        // Always returns success from the controller regardless of whether the email
+        // existed, to avoid leaking which emails are registered.
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or code"));
+
+        PasswordResetToken resetToken = passwordResetTokenRepository
+                .findTopByUserIdAndTokenOrderByCreatedAtDesc(user.getId(), request.getCode())
+                .orElseThrow(() -> new RuntimeException("Invalid email or code"));
+
+        if (resetToken.isUsed()) {
+            throw new RuntimeException("This code has already been used. Please request a new one");
+        }
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("This code has expired. Please request a new one");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
     }
 }

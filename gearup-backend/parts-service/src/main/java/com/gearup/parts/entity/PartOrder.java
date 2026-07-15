@@ -5,40 +5,37 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "spare_parts")
+@Table(name = "part_orders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SparePart {
+public class PartOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
+    private Long partId;
+
+    @Column(nullable = false)
+    private Long buyerId;
+
+    @Column(nullable = false)
     private Long sellerId;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
+    private String partName;
 
     @Column(nullable = false)
     private Double price;
 
-    private String brand;
-    private String carMake;
-    private String carModel;
-    private String condition;
-    private String imageUrl;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private PartStatus status = PartStatus.AVAILABLE;
+    private OrderStatus status = OrderStatus.PENDING;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -48,7 +45,7 @@ public class SparePart {
         createdAt = LocalDateTime.now();
     }
 
-    public enum PartStatus {
-        AVAILABLE, SOLD, RESERVED
+    public enum OrderStatus {
+        PENDING, CONFIRMED, CANCELLED, COMPLETED
     }
 }

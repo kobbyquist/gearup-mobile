@@ -2,6 +2,7 @@ package com.gearup.vehicle.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -39,6 +40,20 @@ public class Vehicle {
     @Column(nullable = false)
     @Builder.Default
     private VehicleType type = VehicleType.CAR;
+
+    @Column(name = "last_serviced_date")
+    private LocalDate lastServicedDate;
+
+    private Integer mileage;
+
+    @Column(name = "insurance_expiry")
+    private LocalDate insuranceExpiry;
+
+    @Column(name = "roadworthy_expiry")
+    private LocalDate roadworthyExpiry;
+
+    @Column(length = 1000)
+    private String notes;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
