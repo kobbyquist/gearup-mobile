@@ -67,6 +67,27 @@ public class Job {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "proposed_cost")
+    private Double proposedCost;
+
+    @Column(name = "proposed_scheduled_date")
+    private LocalDateTime proposedScheduledDate;
+
+    @Column(name = "proposed_note", length = 500)
+    private String proposedNote;
+
+    @Column(name = "proposed_by_mechanic_id")
+    private Long proposedByMechanicId;
+
+    @Column(name = "bidding_cost")
+    private Double biddingCost;
+
+    @Column(name = "bidding_note", length = 500)
+    private String biddingNote;
+
+    @Column(name = "bidding_by_user_id")
+    private Long biddingByUserId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

@@ -31,4 +31,11 @@ public class JobDto {
     private LocalDateTime createdAt;
     private LocalDateTime acceptedAt;
     private LocalDateTime completedAt;
+    private Double proposedCost;
+    private LocalDateTime proposedScheduledDate;
+    private String proposedNote;
+    private Long proposedByMechanicId;
+    private Double biddingCost;
+    private String biddingNote;
+    private Long biddingByUserId;
 }
