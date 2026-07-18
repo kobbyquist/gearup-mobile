@@ -14,9 +14,10 @@ import {
 } from 'expo-audio';
 import CreateJobModal from '../components/CreateJobModal';
 import { vehicleService } from '../services/vehicleService';
+import { partsService } from '../services/partsService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { messageService, Message, JobCardMetadata, AttachmentMetadata } from '../services/messageService';
+import { messageService, Message, JobCardMetadata, AttachmentMetadata, PartCardMetadata } from '../services/messageService';
 import { jobService } from '../services/jobService';
 import { paymentService } from '../services/paymentService';
 import { reviewService } from '../services/reviewService';
@@ -50,6 +51,7 @@ const formatDuration = (totalSeconds: number): string => {
 // navigating away and back — plain component state alone gets wiped on unmount.
 // Resets on a full app restart, which is an acceptable scope for this.
 const jobCardExpandedStore: Record<number, boolean> = {};
+const partCardExpandedStore: Record<number, boolean> = {};
 // ─── AnimatedActionButton: press-scale wrapper used for all job card action buttons ───
 function AnimatedActionButton({ style, textStyle, icon, iconColor, label, onPress, disabled, loading }: {
   style: any;
@@ -787,6 +789,407 @@ const handleCancelJob = async () => {
     </View>
   );
 }
+// ─── PartCardBubble: expandable part-order card rendered inline in the chat ───
+function PartCardBubble({
+  item, isMine, isOwner, myId, accentColor, onActionDone, navigation, expanded, onToggleExpanded, onRequestDelete,
+}: {
+  item: Message;
+  isMine: boolean;
+  isOwner: boolean;
+  myId: number;
+  accentColor: string;
+  onActionDone: (updated: Message) => void;
+  navigation: any;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  onRequestDelete: () => void;
+}) {
+  const [processing, setProcessing] = useState(false);
+  const [cardAlert, setCardAlert] = useState<{ title: string; message: string } | null>(null);
+  const [declineConfirm, setDeclineConfirm] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [offerModal, setOfferModal] = useState(false);
+  const [offerInput, setOfferInput] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const meta = item.metadata as PartCardMetadata;
+  const entranceAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const prevStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    Animated.spring(entranceAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }).start();
+  }, []);
+  useEffect(() => {
+    if (!meta) return;
+    if (prevStatusRef.current !== null && prevStatusRef.current !== meta.status) {
+      pulseAnim.setValue(1);
+      Animated.timing(pulseAnim, { toValue: 0, duration: 900, useNativeDriver: false }).start();
+    }
+    prevStatusRef.current = meta.status;
+  }, [meta?.status]);
+  if (!meta) return null;
+  const isDeletableCard = meta.status === 'DECLINED' || meta.status === 'CANCELLED' || (meta.status === 'COMPLETED' && !!meta.isPaid);
+  const hasProposal = meta.proposedPrice != null;
+  const isMyProposal = hasProposal && meta.proposedByUserId === myId;
+  const sellerCanRespondToOrder = !isOwner && meta.status === 'PENDING';
+  const buyerCanCancel = isOwner && meta.status === 'PENDING';
+  const canNegotiate = meta.status === 'PENDING' && !hasProposal;
+  const otherPartyId = isMine ? item.receiver_id : item.sender_id;
+  const chatJobId = item.job_id;
+  const pushCardUpdate = async (updatedMeta: PartCardMetadata) => {
+    const updated = await messageService.sendPartCard(chatJobId, myId, otherPartyId, updatedMeta);
+    onActionDone(updated);
+  };
+  const handleAcceptOrder = async () => {
+    setProcessing(true);
+    try {
+      await partsService.acceptOrder(meta.orderId);
+      await pushCardUpdate({ ...meta, status: 'ACCEPTED' });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Accept', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleDeclineOrder = async () => {
+    setDeclineConfirm(false);
+    setProcessing(true);
+    try {
+      await partsService.declineOrder(meta.orderId);
+      await pushCardUpdate({ ...meta, status: 'DECLINED' });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Decline', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleCancelOrder = async () => {
+    setCancelConfirm(false);
+    setProcessing(true);
+    try {
+      await partsService.cancelOrder(meta.orderId);
+      await pushCardUpdate({ ...meta, status: 'CANCELLED' });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Cancel', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleMarkSold = async () => {
+    setProcessing(true);
+    try {
+      await partsService.completeOrder(meta.orderId);
+      await pushCardUpdate({ ...meta, status: 'COMPLETED' });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Complete', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleSubmitOffer = async () => {
+    const parsed = parseFloat(offerInput);
+    if (!offerInput || isNaN(parsed) || parsed <= 0) {
+      setCardAlert({ title: 'Invalid Price', message: 'Please enter a valid positive number.' });
+      return;
+    }
+    setProcessing(true);
+    try {
+      await partsService.proposePartPrice(meta.orderId, parsed);
+      await pushCardUpdate({ ...meta, proposedPrice: parsed, proposedByUserId: myId });
+      setOfferModal(false);
+      setOfferInput('');
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Send Offer', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleAcceptOffer = async () => {
+    setProcessing(true);
+    try {
+      await partsService.acceptProposedPartPrice(meta.orderId);
+      await pushCardUpdate({ ...meta, price: meta.proposedPrice!, proposedPrice: null, proposedByUserId: null });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Accept', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleRejectOffer = async () => {
+    setProcessing(true);
+    try {
+      await partsService.rejectProposedPartPrice(meta.orderId);
+      await pushCardUpdate({ ...meta, proposedPrice: null, proposedByUserId: null });
+    } catch (e: any) {
+      setCardAlert({ title: 'Could Not Reject', message: e.message || 'Something went wrong.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleWalletPaid = async () => {
+    try {
+      await pushCardUpdate({ ...meta, isPaid: true });
+    } catch {
+      // card update failing shouldn't block the paid state — the payment itself already succeeded
+    }
+  };
+  const statusColor = getStatusColor(
+    meta.status === 'ACCEPTED' ? 'ACCEPTED' :
+    meta.status === 'COMPLETED' ? 'COMPLETED' :
+    meta.status === 'DECLINED' || meta.status === 'CANCELLED' ? 'CANCELLED' : 'PENDING'
+  );
+  const entranceStyle = {
+    opacity: entranceAnim,
+    transform: [
+      { scale: entranceAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
+      { translateY: entranceAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+    ],
+  };
+  const pulseOverlayStyle = {
+    opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] }),
+    backgroundColor: statusColor,
+  };
+  return (
+    <View style={[styles.jobCardWrap, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
+      <Animated.View style={[styles.jobCard, entranceStyle]}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, pulseOverlayStyle, { borderRadius: 16 }]} />
+        <TouchableOpacity
+          style={styles.jobCardHeader}
+          onPress={onToggleExpanded}
+          onLongPress={isOwner && isDeletableCard ? onRequestDelete : undefined}
+          activeOpacity={0.85}>
+          <View style={styles.jobCardHeaderLeft}>
+            <Ionicons name="cube" size={16} color={accentColor} />
+            <Text style={styles.jobCardTitle} numberOfLines={1}>{meta.partName}</Text>
+          </View>
+          <View style={styles.jobCardHeaderRight}>
+            <View style={[styles.jobCardStatusBadge, { backgroundColor: statusColor + '18' }]}>
+              <View style={[styles.jobCardStatusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.jobCardStatusText, { color: statusColor }]}>
+                {meta.status === 'ACCEPTED' ? 'RESERVED' : meta.status}
+              </Text>
+            </View>
+            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+          </View>
+        </TouchableOpacity>
+        {expanded && (
+          <View style={styles.jobCardBody}>
+            {meta.imageUrl && (
+              <Image source={{ uri: meta.imageUrl }} style={styles.partCardImage} />
+            )}
+            <View style={styles.jobCardDetailRow}>
+              <Ionicons name="cash-outline" size={13} color="#9ca3af" />
+              <Text style={styles.jobCardDetailText}>Price: GHS {meta.price}</Text>
+            </View>
+            {hasProposal && (
+              <View style={styles.counterOfferBox}>
+                <Text style={styles.counterOfferTitle}>
+                  {isMyProposal ? 'Your price offer' : 'New price offer'}
+                </Text>
+                <Text style={styles.counterOfferLine}>💰 GHS {meta.proposedPrice}</Text>
+                {isMyProposal ? (
+                  <Text style={styles.awaitingText}>Waiting for the other party to respond…</Text>
+                ) : (
+                  <View style={styles.jobCardActions}>
+                    <AnimatedActionButton
+                      style={styles.acceptBtn}
+                      textStyle={styles.acceptBtnText}
+                      icon="checkmark"
+                      iconColor="#fff"
+                      label="Accept"
+                      onPress={handleAcceptOffer}
+                      disabled={processing}
+                      loading={processing}
+                    />
+                    <AnimatedActionButton
+                      style={styles.declineBtn}
+                      textStyle={styles.declineBtnText}
+                      icon="close"
+                      iconColor="#dc2626"
+                      label="Reject"
+                      onPress={handleRejectOffer}
+                      disabled={processing}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+            {sellerCanRespondToOrder && (
+              <View style={styles.jobCardActionsStack}>
+                <View style={styles.jobCardActionsFullRow}>
+                  <AnimatedActionButton
+                    style={styles.acceptBtn}
+                    textStyle={styles.acceptBtnText}
+                    icon="checkmark"
+                    iconColor="#fff"
+                    label="Accept Order"
+                    onPress={handleAcceptOrder}
+                    disabled={processing}
+                    loading={processing}
+                  />
+                </View>
+                <View style={styles.jobCardActions}>
+                  {canNegotiate && (
+                    <AnimatedActionButton
+                      style={styles.changesBtn}
+                      textStyle={styles.changesBtnText}
+                      icon="pricetag-outline"
+                      iconColor="#7c3aed"
+                      label="Propose Price"
+                      onPress={() => setOfferModal(true)}
+                      disabled={processing}
+                    />
+                  )}
+                  <AnimatedActionButton
+                    style={styles.declineBtn}
+                    textStyle={styles.declineBtnText}
+                    icon="close"
+                    iconColor="#dc2626"
+                    label="Decline"
+                    onPress={() => setDeclineConfirm(true)}
+                    disabled={processing}
+                  />
+                </View>
+              </View>
+            )}
+            {buyerCanCancel && (
+              <View style={styles.jobCardActionsStack}>
+                <Text style={styles.awaitingText}>Waiting for the seller to respond…</Text>
+                <View style={styles.jobCardActions}>
+                  {canNegotiate && (
+                    <AnimatedActionButton
+                      style={styles.changesBtn}
+                      textStyle={styles.changesBtnText}
+                      icon="pricetag-outline"
+                      iconColor="#7c3aed"
+                      label="Propose Price"
+                      onPress={() => setOfferModal(true)}
+                      disabled={processing}
+                    />
+                  )}
+                  <AnimatedActionButton
+                    style={styles.declineBtn}
+                    textStyle={styles.declineBtnText}
+                    icon="close"
+                    iconColor="#dc2626"
+                    label="Cancel Order"
+                    onPress={() => setCancelConfirm(true)}
+                    disabled={processing}
+                  />
+                </View>
+              </View>
+            )}
+            {meta.status === 'ACCEPTED' && !isOwner && (
+              <View style={styles.jobCardActionsFullRow}>
+                <AnimatedActionButton
+                  style={styles.completeBtn}
+                  textStyle={styles.completeBtnText}
+                  icon="checkmark-done"
+                  iconColor="#fff"
+                  label="Mark as Sold"
+                  onPress={handleMarkSold}
+                  disabled={processing}
+                  loading={processing}
+                />
+              </View>
+            )}
+            {meta.status === 'ACCEPTED' && isOwner && (
+              <Text style={styles.awaitingText}>Reserved for you — waiting for the seller to complete the sale…</Text>
+            )}
+            {meta.status === 'COMPLETED' && meta.isPaid && (
+              <View style={styles.paidBadgeChat}>
+                <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                <Text style={styles.paidBadgeChatText}>Paid</Text>
+              </View>
+            )}
+            {isOwner && meta.status === 'COMPLETED' && !meta.isPaid && (
+              <View style={styles.jobCardActionsFullRow}>
+                <AnimatedActionButton
+                  style={styles.payBtnCard}
+                  textStyle={styles.payBtnCardText}
+                  icon="card"
+                  iconColor="#fff"
+                  label={`Pay GHS ${meta.price}`}
+                  onPress={() => setShowPaymentModal(true)}
+                  disabled={processing}
+                />
+              </View>
+            )}
+            {!isOwner && meta.status === 'COMPLETED' && !meta.isPaid && (
+              <Text style={styles.awaitingText}>Sold — waiting for payment…</Text>
+            )}
+          </View>
+        )}
+        <Modal visible={offerModal} transparent animationType="fade" onRequestClose={() => !processing && setOfferModal(false)}>
+          <View style={styles.cardOverlay}>
+            <View style={styles.proposeCard}>
+              <Text style={styles.proposeTitle}>Propose a Price</Text>
+              <Text style={styles.proposeLabel}>Price (GHS) *</Text>
+              <TextInput
+                style={styles.proposeInput}
+                placeholder="e.g. 350"
+                keyboardType="numeric"
+                value={offerInput}
+                onChangeText={t => setOfferInput(t.replace(/[^0-9.]/g, ''))}
+                autoFocus
+              />
+              <View style={styles.proposeActionsRow}>
+                <TouchableOpacity style={styles.proposeCancelBtn} onPress={() => setOfferModal(false)} disabled={processing}>
+                  <Text style={styles.proposeCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.proposeSubmitBtn} onPress={handleSubmitOffer} disabled={processing} activeOpacity={0.85}>
+                  {processing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.proposeSubmitText}>Send Offer</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+        <ConfirmDialog
+          visible={declineConfirm}
+          icon="close-circle-outline"
+          title="Decline This Order"
+          message="This will decline the buyer's order request."
+          confirmText="Decline"
+          destructive
+          onConfirm={handleDeclineOrder}
+          onCancel={() => setDeclineConfirm(false)}
+        />
+        <ConfirmDialog
+          visible={cancelConfirm}
+          icon="close-circle-outline"
+          title="Cancel Order"
+          message="Are you sure you want to cancel this order?"
+          confirmText="Yes, Cancel"
+          destructive
+          onConfirm={handleCancelOrder}
+          onCancel={() => setCancelConfirm(false)}
+        />
+        <Modal visible={!!cardAlert} transparent animationType="fade" onRequestClose={() => setCardAlert(null)}>
+          <View style={styles.cardOverlay}>
+            {cardAlert && (
+              <AppAlertCard
+                type="error"
+                title={cardAlert.title}
+                message={cardAlert.message}
+                onClose={() => setCardAlert(null)}
+              />
+            )}
+          </View>
+        </Modal>
+        <WalletPaymentSheet
+          visible={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          navigation={navigation}
+          jobId={-meta.orderId}
+          jobTitle={meta.partName}
+          payeeId={meta.sellerId}
+          amount={meta.price}
+          accentColor={accentColor}
+          onPaid={handleWalletPaid}
+        />
+      </Animated.View>
+    </View>
+  );
+}
 // ─── AudioMessageBubble: playback bubble for voice note messages ───
 function AudioMessageBubble({ url, durationSeconds, isMine, onLongPress }: {
   url: string;
@@ -896,6 +1299,7 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
   // Keyed by the stable jobId (not the message's own id, which changes every time
   // sendJobCard deletes-and-reinserts the row) so collapse/expand survives job card updates.
   const [expandedJobCards, setExpandedJobCards] = useState<Record<number, boolean>>(() => ({ ...jobCardExpandedStore }));
+  const [expandedPartCards, setExpandedPartCards] = useState<Record<number, boolean>>(() => ({ ...partCardExpandedStore }));
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -949,7 +1353,13 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
     ]);
     flatListRef.current?.scrollToEnd({ animated: true });
   };
-
+  const upsertPartCard = (message: Message) => {
+    setMessages(prev => [
+      ...prev.filter(m => !(m.message_type === 'part_card' && (m.metadata as PartCardMetadata)?.orderId === (message.metadata as PartCardMetadata)?.orderId)),
+      message,
+    ]);
+    flatListRef.current?.scrollToEnd({ animated: true });
+  };
   const subscribeToMessages = () => {
     channelRef.current = messageService.subscribeToMessages(job.id, (message: any) => {
       if (message._deleted) {
@@ -958,6 +1368,10 @@ const [attachMenuVisible, setAttachMenuVisible] = useState(false);
       }
       if (message.message_type === 'job_card') {
         upsertJobCard(message);
+        return;
+      }
+      if (message.message_type === 'part_card') {
+        upsertPartCard(message);
         return;
       }
       setMessages(prev => {
@@ -1206,6 +1620,41 @@ const pickFromLibrary = async () => {
               setExpandedJobCards(prev => {
                 const next = { ...prev, [jobId]: !(prev[jobId] ?? true) };
                 jobCardExpandedStore[jobId] = next[jobId];
+                return next;
+              });
+            }}
+          />
+        </>
+      );
+    }
+    if (item.message_type === 'part_card') {
+      return (
+        <>
+          {showDate && (
+            <View style={styles.dateSeparator}>
+              <Text style={styles.dateSeparatorText}>
+                {new Date(item.created_at).toLocaleDateString('en-GB', {
+                  weekday: 'short', day: '2-digit', month: 'short'
+                })}
+              </Text>
+            </View>
+          )}
+          <PartCardBubble
+            item={item}
+            isMine={isMine}
+            isOwner={isOwner}
+            myId={myId}
+            accentColor={accentColor}
+            onActionDone={upsertPartCard}
+            navigation={navigation}
+            onRequestDelete={() => setDeleteTarget(item.id)}
+            expanded={expandedPartCards[(item.metadata as PartCardMetadata)?.orderId] ?? true}
+            onToggleExpanded={() => {
+              const orderId = (item.metadata as PartCardMetadata)?.orderId;
+              if (orderId == null) return;
+              setExpandedPartCards(prev => {
+                const next = { ...prev, [orderId]: !(prev[orderId] ?? true) };
+                partCardExpandedStore[orderId] = next[orderId];
                 return next;
               });
             }}
@@ -1598,6 +2047,7 @@ const styles = StyleSheet.create({
   attachMenuIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   attachMenuText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#1b1b1b' },
   imageBubble: { width: 220, height: 220, borderRadius: 16, backgroundColor: '#f3f4f6' },
+  partCardImage: { width: '100%', height: 140, borderRadius: RADIUS.sm, backgroundColor: '#f3f4f6', marginBottom: 6 },
   imageViewerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
 imageViewerFull: { width: '100%', height: '80%' },
   previewActionsRow: { position: 'absolute', bottom: 50, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: SPACING.xl },
