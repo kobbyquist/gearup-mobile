@@ -11,20 +11,28 @@ import com.gearup.payment.repository.BankAccountRepository;
 import com.gearup.payment.repository.WalletRepository;
 import com.gearup.payment.repository.WalletTransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WalletService {
 
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository walletTransactionRepository;
     private final BankAccountRepository bankAccountRepository;
     private final PaystackService paystackService;
+    private final WalletAuditService walletAuditService;
+
+    @Value("${payment.simulate-withdrawals:false}")
+    private boolean simulateWithdrawals;
 
     // ---------- Wallet lookup ----------
 
@@ -175,6 +183,14 @@ public class WalletService {
      * is in flight), then calls Paystack. If the transfer call fails, the deduction is
      * reversed and the ledger row is marked FAILED — the user never silently loses balance.
      */
+    /**
+     * Calls Paystack BEFORE touching the wallet balance — the deduction and the COMPLETED
+     * ledger row only get written (and committed together) if the transfer actually succeeds.
+     * On failure, nothing here has been persisted yet, so there's nothing to "undo": the whole
+     * method simply rolls back. A separate FAILED audit row is still recorded via
+     * recordFailedWithdrawal(), which commits independently in its own transaction so it
+     * survives this method's rollback.
+     */
     @Transactional
     public WalletTransactionDto withdraw(Long userId, WithdrawRequest request) {
         Wallet wallet = getOrCreateWallet(userId);
@@ -186,7 +202,29 @@ public class WalletService {
         BankAccount bankAccount = bankAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("No bank account on file — please add one first"));
 
-        double balanceAfterDeduction = wallet.getBalance() - request.getAmount();
+        double originalBalance = wallet.getBalance();
+        double balanceAfterDeduction = originalBalance - request.getAmount();
+
+        String transferReference;
+        boolean simulated = false;
+        try {
+            transferReference = paystackService.initiateTransfer(
+                    bankAccount.getPaystackRecipientCode(), request.getAmount(), "GearUp wallet withdrawal"
+            );
+        } catch (PaystackException ex) {
+            if (!simulateWithdrawals) {
+                walletAuditService.recordFailedWithdrawal(wallet.getId(), request.getAmount(), originalBalance, bankAccount.getBankName(), ex.getMessage());
+                throw ex;
+            }
+            // Real Paystack call was made and genuinely rejected (logged above by PaystackService) —
+            // this branch only simulates the outcome because Paystack requires a Registered Business
+            // account for real transfers, which is out of scope for this project. Loudly logged and
+            // clearly labeled in the ledger so it's never mistaken for a real payout.
+            log.warn("SIMULATED withdrawal: real Paystack transfer was rejected ({}), simulating success for demo purposes.", ex.getMessage());
+            transferReference = "SIMULATED_" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
+            simulated = true;
+        }
+
         wallet.setBalance(balanceAfterDeduction);
         walletRepository.save(wallet);
 
@@ -195,32 +233,17 @@ public class WalletService {
                 .type(TransactionType.WITHDRAWAL)
                 .amount(request.getAmount())
                 .balanceAfter(balanceAfterDeduction)
-                .status(TransactionStatus.PENDING)
-                .description("Withdrawal to " + bankAccount.getBankName())
+                .paystackReference(transferReference)
+                .status(TransactionStatus.COMPLETED)
+                .description(simulated
+                        ? "Withdrawal to " + bankAccount.getBankName() + " (SIMULATED — real transfer blocked by Paystack business verification)"
+                        : "Withdrawal to " + bankAccount.getBankName())
                 .build();
-        txn = walletTransactionRepository.save(txn);
-
-        try {
-            String transferReference = paystackService.initiateTransfer(
-                    bankAccount.getPaystackRecipientCode(), request.getAmount(), "GearUp wallet withdrawal"
-            );
-            txn.setPaystackReference(transferReference);
-            txn.setStatus(TransactionStatus.COMPLETED);
-            walletTransactionRepository.save(txn);
-        } catch (PaystackException ex) {
-            // Refund — the deduction above must not stick if Paystack didn't actually pay out
-            wallet.setBalance(wallet.getBalance() + request.getAmount());
-            walletRepository.save(wallet);
-
-            txn.setStatus(TransactionStatus.FAILED);
-            txn.setDescription(txn.getDescription() + " — failed: " + ex.getMessage());
-            walletTransactionRepository.save(txn);
-
-            throw ex;
-        }
+        walletTransactionRepository.save(txn);
 
         return toTransactionDto(txn);
     }
+
 
     // ---------- Mapping helpers ----------
 
