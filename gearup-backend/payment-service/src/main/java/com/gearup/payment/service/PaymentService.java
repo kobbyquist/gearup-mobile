@@ -7,6 +7,7 @@ import com.gearup.payment.entity.Payment.PaymentStatus;
 import com.gearup.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final WalletService walletService;
 
     public PaymentDto createPayment(Long payerId, CreatePaymentRequest request) {
         Payment payment = Payment.builder()
@@ -29,10 +31,10 @@ public class PaymentService {
                 .notes(request.getNotes())
                 .reference(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .build();
-
         return mapToDto(paymentRepository.save(payment));
     }
 
+    @Transactional
     public PaymentDto completePayment(Long paymentId, Long payerId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
@@ -41,9 +43,19 @@ public class PaymentService {
             throw new RuntimeException("Unauthorized");
         }
 
+        if (payment.getStatus() == PaymentStatus.COMPLETED) {
+            throw new RuntimeException("Payment already completed");
+        }
+
+        // Moves real wallet balance from payer to payee. Throws (e.g. insufficient
+        // balance) before the status below is ever touched, so nothing is left half-done.
+        walletService.transferForJobPayment(
+                payment.getPayerId(), payment.getPayeeId(), payment.getAmount(),
+                payment.getJobId(), payment.getId()
+        );
+
         payment.setStatus(PaymentStatus.COMPLETED);
         payment.setPaidAt(LocalDateTime.now());
-
         return mapToDto(paymentRepository.save(payment));
     }
 
