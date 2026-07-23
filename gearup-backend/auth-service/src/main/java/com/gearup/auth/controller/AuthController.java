@@ -21,6 +21,17 @@ public class AuthController {
         return ResponseEntity.ok(authService.register(request));
     }
 
+    @PostMapping("/register/send-code")
+    public ResponseEntity<Map<String, String>> sendRegistrationCode(@Valid @RequestBody SendRegistrationCodeRequest request) {
+        authService.sendRegistrationCode(request);
+        return ResponseEntity.ok(Map.of("message", "Verification code sent to your email."));
+    }
+
+    @PostMapping("/register/verify")
+    public ResponseEntity<AuthResponse> verifyRegistration(@Valid @RequestBody VerifyRegistrationRequest request) {
+        return ResponseEntity.ok(authService.verifyRegistrationAndCreateAccount(request));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
@@ -29,9 +40,13 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
-        return ResponseEntity.ok(Map.of("message", "If that email exists, a reset link has been sent."));
+        return ResponseEntity.ok(Map.of("message", "A reset code has been sent to your email."));
     }
-
+@PostMapping("/verify-reset-code")
+    public ResponseEntity<Map<String, String>> verifyResetCode(@Valid @RequestBody VerifyResetCodeRequest request) {
+        authService.verifyResetCode(request);
+        return ResponseEntity.ok(Map.of("message", "Code verified."));
+    }
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
