@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const DEFAULT_IP = '172.20.10.4';
+const DEFAULT_IP = '172.20.10.2';
 const IP_STORAGE_KEY = 'dev_base_ip';
 
 export const getBaseIP = async (): Promise<string> => {

@@ -19,9 +19,10 @@ import { authService } from '../../services/authService';
 import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
+
 export default function OtpScreen({ route, navigation }: any) {
   const dispatch = useDispatch<AppDispatch>();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
+const { loading, error, user } = useSelector((state: RootState) => state.auth);
   const { mode = 'register', name, email, phone, password, role } = route.params;
   const isRegisterMode = mode === 'register';
   const isDeleteMode = mode === 'delete';
@@ -35,6 +36,7 @@ export default function OtpScreen({ route, navigation }: any) {
   const displayLoading = isRegisterMode ? loading : resetVerifying;
   const displayError = isRegisterMode ? error : resetError;
   const inputs = useRef<Array<TextInput | null>>([]);
+  const isSubmittingRef = useRef(false);
   // Countdown timer
   useEffect(() => {
     if (timer <= 0) {
@@ -46,22 +48,39 @@ export default function OtpScreen({ route, navigation }: any) {
     }, 1000);
     return () => clearInterval(interval);
   }, [timer]);
+  useEffect(() => {
+    if (isRegisterMode && user) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: user.role === 'OWNER' ? 'OwnerTabs' : 'MechanicTabs' }],
+      });
+    }
+  }, [user]);
 
   const handleOtpChange = (value: string, index: number) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
+  if (!/^\d*$/.test(value)) return;
+
+  if (value.length > 1) {
+    const digits = value.slice(0, 6).split('');
+    const newOtp = ['', '', '', '', '', ''];
+    digits.forEach((d, i) => { newOtp[i] = d; });
     setOtp(newOtp);
-    // Auto advance to next input
-    if (value && index < 5) {
-      inputs.current[index + 1]?.focus();
-    }
-    // Auto submit when all 6 digits entered
-    if (index === 5 && value) {
-      const fullOtp = [...newOtp].join('');
-      if (fullOtp.length === 6) handleVerify(fullOtp);
-    }
-  };
+    inputs.current[Math.min(digits.length, 5)]?.focus();
+    if (digits.length === 6) handleVerify(digits.join(''));
+    return;
+  }
+
+  const newOtp = [...otp];
+  newOtp[index] = value;
+  setOtp(newOtp);
+  if (value && index < 5) {
+    inputs.current[index + 1]?.focus();
+  }
+  if (index === 5 && value) {
+    const fullOtp = newOtp.join('');
+    if (fullOtp.length === 6) handleVerify(fullOtp);
+  }
+};
 
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
@@ -70,37 +89,36 @@ export default function OtpScreen({ route, navigation }: any) {
   };
 
   const handleVerify = async (code?: string) => {
+    if (isSubmittingRef.current) return;
     const finalCode = code || otp.join('');
     if (finalCode.length < 6) {
       setResendAlert({ type: 'error', title: 'Invalid Code', message: 'Please enter the 6-digit code.' });
       return;
     }
-    if (isRegisterMode) {
-      dispatch(verifyRegistrationThunk({ name, email, phone, password, role, code: finalCode }));
-      return;
-    }
-    if (isDeleteMode) {
-      setResetVerifying(true);
-      setResetError(null);
-      try {
+    isSubmittingRef.current = true;
+    try {
+      if (isRegisterMode) {
+        await dispatch(verifyRegistrationThunk({ name, email, phone, password, role, code: finalCode })).unwrap();
+        return;
+      }
+      if (isDeleteMode) {
+        setResetVerifying(true);
+        setResetError(null);
         await authService.verifyAccountDeletion(finalCode);
         navigation.replace('AccountDeletionSubmitted');
-      } catch (e: any) {
-        setResetError(e.message || 'Invalid or expired code. Please try again.');
-      } finally {
-        setResetVerifying(false);
+        return;
       }
-      return;
-    }
-    setResetVerifying(true);
-    setResetError(null);
-    try {
+      setResetVerifying(true);
+      setResetError(null);
       await authService.verifyResetCode(email, finalCode);
       navigation.navigate('ResetNewPassword', { email, code: finalCode });
     } catch (e: any) {
-      setResetError(e.message || 'Invalid or expired code. Please try again.');
+      if (!isRegisterMode) {
+        setResetError(e?.message || 'Invalid or expired code. Please try again.');
+      }
     } finally {
-      setResetVerifying(false);
+      isSubmittingRef.current = false;
+      if (!isRegisterMode) setResetVerifying(false);
     }
   };
   const handleResend = async () => {
@@ -140,7 +158,20 @@ export default function OtpScreen({ route, navigation }: any) {
       {/* Back button */}
       <TouchableOpacity
         style={styles.backBtn}
-        onPress={() => navigation.goBack()}
+        onPress={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+            return;
+          }
+          if (user) {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: user.role === 'OWNER' ? 'OwnerTabs' : 'MechanicTabs' }],
+            });
+          } else {
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          }
+        }}
       >
         <Ionicons name="arrow-back" size={22} color="#1b4332" />
       </TouchableOpacity>

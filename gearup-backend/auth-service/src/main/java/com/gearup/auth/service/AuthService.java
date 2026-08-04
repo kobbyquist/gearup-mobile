@@ -125,14 +125,25 @@ private final UserRepository userRepository;
         RegistrationCode regCode = registrationCodeRepository
                 .findTopByEmailAndCodeOrderByCreatedAtDesc(request.getEmail(), request.getCode())
                 .orElseThrow(() -> new RuntimeException("Invalid email or code"));
-
         if (regCode.isUsed()) {
-            throw new RuntimeException("This code has already been used. Please request a new one");
+            // This exact code already succeeded once (a duplicate/racing request
+            // from the client, most likely). If the account it created still
+            // exists, treat this as success instead of an error rather than
+            // showing the user a false failure after their account is already real.
+            return userRepository.findByEmail(request.getEmail())
+                    .map(existing -> AuthResponse.builder()
+                            .token(jwtService.generateToken(existing.getEmail(), existing.getId(), existing.getRole().name()))
+                            .userId(existing.getId())
+                            .name(existing.getName())
+                            .email(existing.getEmail())
+                            .phone(existing.getPhone())
+                            .role(existing.getRole())
+                            .build())
+                    .orElseThrow(() -> new RuntimeException("This code has already been used. Please request a new one"));
         }
         if (regCode.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("This code has expired. Please request a new one");
         }
-
         // Defensive re-check: something could have registered this email/phone
         // in the gap between sending the code and verifying it.
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -141,7 +152,6 @@ private final UserRepository userRepository;
         if (userRepository.existsByPhone(request.getPhone())) {
             throw new RuntimeException("Phone number already registered");
         }
-
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())

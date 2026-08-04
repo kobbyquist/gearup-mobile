@@ -17,5 +17,7 @@ public class PartOrderDto {
     private String partName;
     private Double price;
     private OrderStatus status;
+    private Double proposedPrice;
+    private Long proposedByUserId;
     private LocalDateTime createdAt;
 }

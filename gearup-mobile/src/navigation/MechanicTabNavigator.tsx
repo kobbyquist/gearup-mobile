@@ -110,7 +110,7 @@ function MechanicTabs() {
 export default function MechanicTabNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MechanicTabs" component={MechanicTabs} />
+      <Stack.Screen name="MechanicTabsRoot" component={MechanicTabs} />
       <Stack.Screen name="MechanicMap" component={MechanicMapScreen} />
     </Stack.Navigator>
   );

@@ -249,20 +249,35 @@ getUnreadCount: async (userId: number): Promise<number> => {
   // Fires on any new incoming message or read-status change for this user, so a
   // tab-bar badge can stay live without polling.
   subscribeToUnreadCount: (userId: number, onChange: () => void) => {
-    const channel = supabase
-      .channel(`unread-count:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
-        () => onChange()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
-        () => onChange()
-      )
-      .subscribe();
-    return channel;
+    const topic = `unread-count:${userId}`;
+    // Defensive: if a channel with this exact topic is already registered
+    // (e.g. a fast unmount/remount race leaving a stale subscription), remove
+    // it first — attaching new callbacks to an already-subscribed channel
+    // throws, which previously crashed the app.
+    const existing = supabase.getChannels().find((c: any) => c.topic === `realtime:${topic}`);
+    if (existing) {
+      supabase.removeChannel(existing);
+    }
+    try {
+      const channel = supabase
+        .channel(topic)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+          () => onChange()
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+          () => onChange()
+        )
+        .subscribe();
+      return channel;
+    } catch {
+      // A badge subscription failing shouldn't take down the app — the
+      // count will just stay stale until the next successful subscribe.
+      return null;
+    }
   },
   markAsRead: async (jobId: number, receiverId: number): Promise<void> => {
     await supabase
@@ -318,6 +333,6 @@ getUnreadCount: async (userId: number): Promise<number> => {
   },
 
   unsubscribe: (channel: any) => {
-    supabase.removeChannel(channel);
+    if (channel) supabase.removeChannel(channel);
   },
 };
