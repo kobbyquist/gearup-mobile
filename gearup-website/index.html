@@ -1,0 +1,479 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GearUp — Find a Mechanic Near You</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- Lucide icons (drop-in SVG icons — same icon set used by React Icons' "lu" prefix) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <!-- ── NAV ─────────────────────────────────────────────────── -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <img src="LOGO.png" alt="GearUp logo" class="nav-logo-img" />
+        <span class="logo-text">GearUp</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+        <li><a href="#for-mechanics" class="nav-link">For Mechanics</a></li>
+        <li><a href="#screenshots" class="nav-link">Screenshots</a></li>
+      </ul>
+      <div class="nav-right">
+        <a href="#download" class="nav-cta">
+          <i data-lucide="clock" class="nav-cta-icon"></i>
+          Coming Soon
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#for-mechanics">For Mechanics</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#download" class="mobile-cta">Coming Soon</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <div class="hero-bg-gradient"></div>
+    <div class="hero-content">
+      <div class="hero-text">
+        <div class="hero-badge reveal">
+          <span class="badge-dot"></span>
+          Trusted by drivers across the city
+        </div>
+        <h1 class="hero-title reveal">
+          Your car broke down.<br/>
+          <span class="gradient-text">Help is one tap away.</span>
+        </h1>
+        <p class="hero-subtitle reveal">
+          GearUp connects car owners with verified, nearby mechanics in real time.
+          Find help, track your mechanic live, and pay securely — all in one app.
+        </p>
+        <div class="hero-cta reveal">
+          <a href="#download" class="btn-primary">Download Free</a>
+          <a href="#how-it-works" class="btn-ghost">See How It Works</a>
+        </div>
+        <div class="hero-stats reveal">
+          <div class="stat">
+            <span class="stat-number">500+</span>
+            <span class="stat-label">Verified Mechanics</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-number">4.8★</span>
+            <span class="stat-label">Average Rating</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-number">&lt;10 min</span>
+            <span class="stat-label">Average Response</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-phone reveal-right">
+        <div class="phone-mockup">
+          <div class="phone-screen">
+            <div class="mock-screen">
+              <div class="mock-header">
+                <div class="mock-greeting">Good morning, Alex</div>
+                <div class="mock-avatar"></div>
+              </div>
+              <div class="mock-sos-btn">
+                <i data-lucide="siren" class="mock-icon"></i>
+                <span>SOS Emergency</span>
+              </div>
+              <div class="mock-section-title">Nearby Mechanics</div>
+              <div class="mock-mechanic-card">
+                <div class="mechanic-avatar green"></div>
+                <div class="mechanic-info">
+                  <div class="mechanic-name">James Osei</div>
+                  <div class="mechanic-meta">Engine · 1.2 km away · 4.9</div>
+                </div>
+                <i data-lucide="chevron-right" class="mechanic-arrow-icon"></i>
+              </div>
+              <div class="mock-mechanic-card">
+                <div class="mechanic-avatar teal"></div>
+                <div class="mechanic-info">
+                  <div class="mechanic-name">Kwame Boateng</div>
+                  <div class="mechanic-meta">Brakes · 2.4 km away · 4.7</div>
+                </div>
+                <i data-lucide="chevron-right" class="mechanic-arrow-icon"></i>
+              </div>
+              <div class="mock-map-preview">
+                <div class="map-dot pulse-dot"></div>
+                <div class="map-label">Live Map</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-glow"></div>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <span>Scroll to explore</span>
+      <i data-lucide="chevron-down" class="scroll-arrow-icon"></i>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ──────────────────────────────────────────────── -->
+  <section class="features" id="features">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <p class="section-eyebrow">Everything you need</p>
+        <h2 class="section-title">Built for when things go wrong</h2>
+        <p class="section-desc">From a flat tyre at midnight to a routine service booking — GearUp has you covered.</p>
+      </div>
+
+      <div class="features-grid">
+
+        <div class="feature-card card-large reveal">
+          <div class="feature-icon-wrap green">
+            <i data-lucide="map-pin" class="feature-icon-svg"></i>
+          </div>
+          <h3>Find Mechanics Near You</h3>
+          <p>See verified mechanics on a live map, sorted by distance. Filter by specialization — engine, brakes, tyres, AC, and more.</p>
+          <div class="feature-tag">Live Map</div>
+        </div>
+
+        <div class="feature-card reveal" data-delay="100">
+          <div class="feature-icon-wrap red">
+            <i data-lucide="siren" class="feature-icon-svg"></i>
+          </div>
+          <h3>SOS Emergency Mode</h3>
+          <p>Stranded? One tap sends an emergency request to the nearest available mechanic instantly.</p>
+          <div class="feature-tag">Instant Help</div>
+        </div>
+
+        <div class="feature-card reveal" data-delay="200">
+          <div class="feature-icon-wrap blue">
+            <i data-lucide="navigation" class="feature-icon-svg"></i>
+          </div>
+          <h3>Real-Time Job Tracking</h3>
+          <p>Watch your mechanic's route on the map and get live status updates from accepted to in-progress to done.</p>
+          <div class="feature-tag">Live Tracking</div>
+        </div>
+
+        <div class="feature-card card-large reveal" data-delay="100">
+          <div class="feature-icon-wrap purple">
+            <i data-lucide="message-circle" class="feature-icon-svg"></i>
+          </div>
+          <h3>In-App Chat</h3>
+          <p>Message your mechanic directly. Share photos, describe the problem, and agree on pricing — before work begins.</p>
+          <div class="feature-tag">Instant Messaging</div>
+        </div>
+
+        <div class="feature-card reveal" data-delay="300">
+          <div class="feature-icon-wrap gold">
+            <i data-lucide="star" class="feature-icon-svg"></i>
+          </div>
+          <h3>Save Favourite Mechanics</h3>
+          <p>Star mechanics you trust and book them directly next time — or schedule a future appointment.</p>
+          <div class="feature-tag">Scheduling</div>
+        </div>
+
+        <div class="feature-card reveal" data-delay="400">
+          <div class="feature-icon-wrap green">
+            <i data-lucide="wallet" class="feature-icon-svg"></i>
+          </div>
+          <h3>Secure In-App Payments</h3>
+          <p>Pay securely through your wallet. Top up, review the price, approve it, and release payment when the job's done.</p>
+          <div class="feature-tag">Secure Wallet</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ───────────────────────────────────────────── -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <p class="section-eyebrow">Simple process</p>
+        <h2 class="section-title">From broken down to back on the road</h2>
+      </div>
+
+      <div class="steps-container">
+        <div class="step reveal">
+          <div class="step-number">01</div>
+          <div class="step-content">
+            <h3>Post Your Job</h3>
+            <p>Describe what's wrong with your vehicle. Add your location, vehicle details, and when you need the work done.</p>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step reveal" data-delay="150">
+          <div class="step-number">02</div>
+          <div class="step-content">
+            <h3>Get Matched</h3>
+            <p>Nearby verified mechanics see your job. One accepts, and you can track them heading your way in real time.</p>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step reveal" data-delay="300">
+          <div class="step-number">03</div>
+          <div class="step-content">
+            <h3>Job Gets Done</h3>
+            <p>Your mechanic arrives, gets to work. You'll see status updates every step of the way.</p>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step reveal" data-delay="450">
+          <div class="step-number">04</div>
+          <div class="step-content">
+            <h3>Pay &amp; Rate</h3>
+            <p>Review the final price, pay through the app, and leave a rating. Simple, transparent, done.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOR MECHANICS ─────────────────────────────────────────── -->
+  <section class="for-mechanics" id="for-mechanics">
+    <div class="section-inner">
+      <div class="mechanics-grid">
+        <div class="mechanics-text reveal">
+          <p class="section-eyebrow light">For mechanics</p>
+          <h2 class="section-title light">Grow your business with GearUp</h2>
+          <p class="mechanics-desc">
+            Whether you're an independent mechanic or run a small shop — GearUp puts your skills in front of customers who need you right now.
+          </p>
+          <ul class="mechanics-perks">
+            <li>
+              <i data-lucide="clipboard-list" class="perk-icon-svg"></i>
+              <div>
+                <strong>Browse available jobs</strong>
+                <p>See all open jobs nearby and accept the ones that match your skills and schedule.</p>
+              </div>
+            </li>
+            <li>
+              <i data-lucide="banknote" class="perk-icon-svg"></i>
+              <div>
+                <strong>Set your own rates</strong>
+                <p>Name your price per job. Get paid directly to your wallet and withdraw anytime.</p>
+              </div>
+            </li>
+            <li>
+              <i data-lucide="shopping-bag" class="perk-icon-svg"></i>
+              <div>
+                <strong>Sell spare parts</strong>
+                <p>List parts for sale through the marketplace. Reach customers looking for trusted suppliers.</p>
+              </div>
+            </li>
+            <li>
+              <i data-lucide="calendar-check" class="perk-icon-svg"></i>
+              <div>
+                <strong>Manage your availability</strong>
+                <p>Set your working hours, toggle availability on/off, and control your schedule.</p>
+              </div>
+            </li>
+          </ul>
+          <a href="#download" class="btn-primary">Join as a Mechanic</a>
+        </div>
+        <div class="mechanics-phone reveal-right">
+          <div class="phone-mockup small">
+            <div class="phone-screen">
+              <div class="mock-screen dark">
+                <div class="mock-header dark-header">
+                  <div class="mock-greeting light-text">Available Jobs</div>
+                  <div class="availability-badge">● Online</div>
+                </div>
+                <div class="mock-job-card">
+                  <div class="job-card-title">Brake pad replacement</div>
+                  <div class="job-card-meta">2.1 km · Toyota Camry · Urgent</div>
+                  <div class="job-card-price">GH₵ 180</div>
+                </div>
+                <div class="mock-job-card active-job">
+                  <div class="job-card-title">Engine oil change</div>
+                  <div class="job-card-meta">0.8 km · Honda Civic</div>
+                  <div class="job-card-price">GH₵ 120</div>
+                </div>
+                <div class="mock-earnings">
+                  <div class="earnings-label">This Week</div>
+                  <div class="earnings-amount">GH₵ 1,240</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SPECIALIZATIONS ───────────────────────────────────────── -->
+  <section class="specializations">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <p class="section-eyebrow">All services covered</p>
+        <h2 class="section-title">Whatever your vehicle needs</h2>
+      </div>
+      <div class="specs-grid reveal">
+        <div class="spec-chip"><i data-lucide="wrench" class="chip-icon"></i> Engine Repair</div>
+        <div class="spec-chip"><i data-lucide="zap" class="chip-icon"></i> Electrical</div>
+        <div class="spec-chip"><i data-lucide="circle-dot" class="chip-icon"></i> Tyres &amp; Wheels</div>
+        <div class="spec-chip"><i data-lucide="wind" class="chip-icon"></i> Air Conditioning</div>
+        <div class="spec-chip"><i data-lucide="car" class="chip-icon"></i> Body Work</div>
+        <div class="spec-chip"><i data-lucide="octagon-alert" class="chip-icon"></i> Brakes</div>
+        <div class="spec-chip"><i data-lucide="settings" class="chip-icon"></i> Transmission</div>
+        <div class="spec-chip"><i data-lucide="tool" class="chip-icon"></i> General Service</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TESTIMONIALS ──────────────────────────────────────────── -->
+  <section class="testimonials">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <p class="section-eyebrow">Real stories</p>
+        <h2 class="section-title">What drivers are saying</h2>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card reveal">
+          <div class="stars">
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+          </div>
+          <p>"My car broke down on the highway at 10pm. GearUp found a mechanic within 8 minutes. Absolute lifesaver."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar a1"></div>
+            <div>
+              <strong>Ama Asante</strong>
+              <span>Accra, Ghana</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card reveal" data-delay="150">
+          <div class="stars">
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+          </div>
+          <p>"The chat feature is great — I could describe the problem, get a quote, and approve it before anyone touched my car."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar a2"></div>
+            <div>
+              <strong>Kofi Mensah</strong>
+              <span>Kumasi, Ghana</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card reveal" data-delay="300">
+          <div class="stars">
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon filled"></i>
+            <i data-lucide="star" class="star-icon"></i>
+          </div>
+          <p>"As a mechanic, I went from waiting for referrals to having a steady stream of jobs daily. The earnings withdrawal is fast too."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar a3"></div>
+            <div>
+              <strong>Yaw Darko</strong>
+              <span>Mechanic, Tema</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── OWNER SCREENSHOTS ────────────────────────────────────── -->
+
+  <!-- Header lives OUTSIDE the sticky/scroll container so it's always visible -->
+  <div class="ss-header-outer">
+    <p class="section-eyebrow">See it in action</p>
+    <h2 class="ss-main-title">The owner experience</h2>
+    <p class="ss-main-desc">Everything a car owner needs, in one clean app. Scroll through each screen below.</p>
+    <button class="ss-slideshow-btn" id="ss-slideshow-btn">
+      <i data-lucide="play-circle" class="ss-slideshow-icon"></i>
+      Slideshow
+    </button>
+  </div>
+
+  <!-- Outer sticky container — height = 100vh * panels -->
+  <div class="ss-outer" id="screenshots">
+    
+  <!-- ── DOWNLOAD CTA ──────────────────────────────────────────── -->
+  <section class="download" id="download">
+    <div class="download-bg"></div>
+    <div class="section-inner">
+      <div class="download-content reveal">
+        <h2 class="download-title">Ready to get back on the road?</h2>
+        <p class="download-desc">Download GearUp free. Available on iOS and Android.</p>
+        <div class="download-btns">
+          <a href="#" class="store-btn">
+            <img
+              src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+              alt="Download on the App Store"
+              class="store-badge"
+            />
+          </a>
+          <a href="#" class="store-btn">
+            <img
+              src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+              alt="Get it on Google Play"
+              class="store-badge store-badge-play"
+            />
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="LOGO.png" alt="GearUp logo" class="footer-logo-img" />
+        <span class="logo-text">GearUp</span>
+        <p>Connecting drivers with mechanics, instantly.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#for-mechanics">For Mechanics</a>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <a href="#">Help Centre</a>
+          <a href="#">Contact Us</a>
+          <a href="#">Safety</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 GearUp. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <!-- Initialise all Lucide icons after DOM is ready -->
+  <script>lucide.createIcons();</script>
+</body>
+</html>

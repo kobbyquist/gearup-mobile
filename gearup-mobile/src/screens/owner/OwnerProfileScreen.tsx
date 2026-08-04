@@ -413,7 +413,7 @@ export default function OwnerProfileScreen({ navigation }: any) {
         </TouchableOpacity>
         {pendingDeletion ? (
           <TouchableOpacity style={styles.deleteAccountBtn} onPress={() => setCancelDeletionConfirm(true)}>
-            <Ionicons name="time-outline" size={18} color="#b45309" />
+            <Ionicons name="time-outline" size={18} color="#554000" />
             <Text style={styles.deleteAccountPendingText}>Deletion Request Pending — Cancel</Text>
           </TouchableOpacity>
         ) : (
@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
   logoutText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: '#dc2626' },
   deleteAccountBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, margin: SPACING.lg, marginTop: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#f3f4f6' },
   deleteAccountText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#dc2626' },
-  deleteAccountPendingText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#b45309' },
+  deleteAccountPendingText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#554000' },
   modal: { flex: 1, backgroundColor: '#f9fafb' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   modalTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#1b1b1b' },
@@ -797,11 +797,11 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   detailLabel: { fontSize: FONT_SIZES.sm, color: '#6b7280' },
   detailValue: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#1b1b1b' },
-  detailValueWarn: { color: '#b45309' },
+  detailValueWarn: { color: '#554000' },
   detailValueDanger: { color: '#dc2626' },
   detailDivider: { height: 1, backgroundColor: '#f3f4f6' },
   notesCard: { backgroundColor: '#fffbeb', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.md, borderWidth: 1, borderColor: '#fde68a' },
-  notesLabel: { fontSize: FONT_SIZES.xs, fontWeight: '700', color: '#b45309', marginBottom: 4 },
+  notesLabel: { fontSize: FONT_SIZES.xs, fontWeight: '700', color: '#554000', marginBottom: 4 },
   notesText: { fontSize: FONT_SIZES.sm, color: '#1b1b1b' },
   editVehicleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: SPACING.lg, padding: 14, backgroundColor: '#f0fdf4', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#86efac' },
   editVehicleBtnText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: '#1b4332' },

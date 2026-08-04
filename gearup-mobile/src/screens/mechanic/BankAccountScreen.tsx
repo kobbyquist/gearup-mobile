@@ -29,7 +29,7 @@ const BANK_PROVIDERS = [
   { name: 'Agricultural Development Bank', code: '080100' },
 ];
 
-const ACCENT = '#b45309';
+const ACCENT = '#554000';
 
 export default function BankAccountScreen({ navigation }: any) {
   const [loadingExisting, setLoadingExisting] = useState(true);
@@ -92,7 +92,7 @@ export default function BankAccountScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={['#b45309', '#78350f']} style={styles.header}>
+      <LinearGradient colors={['#554000', '#392A00']} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
@@ -169,7 +169,7 @@ export default function BankAccountScreen({ navigation }: any) {
               onPress={handleSave}
               disabled={saving}
               activeOpacity={0.85}>
-              <LinearGradient colors={['#b45309', '#78350f']} style={styles.saveGradient}>
+              <LinearGradient colors={['#554000', '#392A00']} style={styles.saveGradient}>
                 {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Verify & Save</Text>}
               </LinearGradient>
             </TouchableOpacity>

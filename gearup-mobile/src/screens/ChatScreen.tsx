@@ -1583,7 +1583,7 @@ const pickFromLibrary = async () => {
     });
   };
 
-  const accentColor = isOwner ? '#1b4332' : '#b45309';
+  const accentColor = isOwner ? '#1b4332' : '#554000';
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMine = item.sender_id === myId;
@@ -1741,7 +1741,7 @@ const pickFromLibrary = async () => {
   };
   const headerColor = isOwner
     ? ['#1b4332', '#2d6a4f']
-    : ['#b45309', '#78350f'];
+    : ['#554000', '#392A00'];
 
   return (
     <View style={styles.container}>
@@ -1820,7 +1820,7 @@ const pickFromLibrary = async () => {
                 onPress={handleSend}
                 disabled={!newMessage.trim() || sending}>
                 <LinearGradient
-                  colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#b45309', '#78350f']}
+                  colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#554000', '#392A00']}
                   style={styles.sendBtnGradient}>
                   {sending ? (
                     <ActivityIndicator size="small" color="#fff" />

@@ -83,7 +83,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
           results.push({
             key: `payment-${recentCompleted.id}`,
             icon: 'cash-outline',
-            color: '#b45309',
+            color: '#554000',
             bg: '#fffbeb',
             title: 'Job completed — payment due',
             subtitle: `${recentCompleted.title} · GHS ${recentCompleted.finalCost || 0}`,
@@ -94,7 +94,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
         results.push({
           key: `payment-${recentCompleted.id}`,
           icon: 'cash-outline',
-          color: '#b45309',
+          color: '#554000',
           bg: '#fffbeb',
           title: 'Job completed — payment due',
           subtitle: `${recentCompleted.title} · GHS ${recentCompleted.finalCost || 0}`,
@@ -128,7 +128,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
           results.push({
             key: `vehicle-${v.id}-${field}`,
             icon: 'alert-circle-outline',
-            color: daysLeft < 0 ? '#dc2626' : '#b45309',
+            color: daysLeft < 0 ? '#dc2626' : '#554000',
             bg: daysLeft < 0 ? '#fef2f2' : '#fffbeb',
             title: daysLeft < 0 ? `${label} expired` : `${label} expiring soon`,
             subtitle: `${v.make} ${v.model} · ${formatDate(dateStr)}`,

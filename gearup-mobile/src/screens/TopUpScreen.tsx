@@ -19,8 +19,8 @@ export default function TopUpScreen({ navigation }: any) {
   const { user } = useSelector((state: RootState) => state.auth);
   const { popup } = usePaystack();
   const isOwner = user?.role === 'OWNER';
-  const accentColor = isOwner ? '#1b4332' : '#b45309';
-  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#b45309', '#78350f'];
+  const accentColor = isOwner ? '#1b4332' : '#554000';
+  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#554000', '#392A00'];
 
 const [amount, setAmount] = useState('');
   const [verifying, setVerifying] = useState(false);

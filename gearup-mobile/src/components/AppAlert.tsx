@@ -20,7 +20,7 @@ interface AppAlertProps {
 const TYPE_CONFIG: Record<AlertType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
   success: { icon: 'checkmark-circle', color: '#10b981', bg: '#f0fdf4' },
   error: { icon: 'close-circle', color: '#dc2626', bg: '#fef2f2' },
-  warning: { icon: 'warning', color: '#b45309', bg: '#fffbeb' },
+  warning: { icon: 'warning', color: '#554000', bg: '#fffbeb' },
   info: { icon: 'information-circle', color: '#2563eb', bg: '#eff6ff' },
 };
 

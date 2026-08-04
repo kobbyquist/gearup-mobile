@@ -33,7 +33,7 @@ const SLIDES = [
   },
   {
     icon: 'star',
-    colors: ['#78350f', '#b45309'],
+    colors: ['#392A00', '#554000'],
     accent: '#fde68a',
     title: 'Save Your Favorite Mechanics',
     subtitle: 'Star the mechanics you trust and book them directly next time, or schedule ahead of time.',

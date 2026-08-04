@@ -21,8 +21,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const ACCENT = '#b45309';
-const ACCENT_DEEP = '#78350f';
+const ACCENT = '#554000';
+const ACCENT_DEEP = '#392A00';
 
 const getWeekGroup = (dateStr: string): string => {
   const date = new Date(dateStr);
