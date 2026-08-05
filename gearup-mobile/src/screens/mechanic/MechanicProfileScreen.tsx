@@ -21,8 +21,8 @@ import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 import { locationService } from '../../services/locationService';
 import { useFocusEffect } from '@react-navigation/native';
 
-const ACCENT = '#554000';
-const ACCENT_DEEP = '#392A00';
+const ACCENT = '#000814';
+const ACCENT_DEEP = '#001D3D';
 
 const formatTime = (time: string | null) => {
   if (!time) return '--:--';
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: { paddingTop: 60, paddingBottom: SPACING.xl, alignItems: 'center', gap: SPACING.sm, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fbbf24', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 32, fontWeight: '700', color: '#392A00' },
+  avatarText: { fontSize: 32, fontWeight: '700', color: '#001D3D' },
   name: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#fff' },
   email: { fontSize: FONT_SIZES.sm, color: '#fde68a' },
   bio: { fontSize: FONT_SIZES.sm, color: '#fef3c7', textAlign: 'center', paddingHorizontal: SPACING.xl },

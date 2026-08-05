@@ -12,7 +12,7 @@ import { AppAlertCard } from '../../components/AppAlert';
 import { walletService, BankAccountDto } from '../../services/walletService';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
-const ACCENT = '#554000';
+const ACCENT = '#000814';
 
 export default function WithdrawScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,7 @@ export default function WithdrawScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={['#554000', '#392A00']} style={styles.header}>
+      <LinearGradient colors={['#000814', '#001D3D']} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
@@ -140,7 +140,7 @@ export default function WithdrawScreen({ navigation }: any) {
               onPress={handleWithdraw}
               disabled={!isValidAmount || withdrawing}
               activeOpacity={0.85}>
-              <LinearGradient colors={['#554000', '#392A00']} style={styles.withdrawGradient}>
+              <LinearGradient colors={['#000814', '#001D3D']} style={styles.withdrawGradient}>
                 {withdrawing ? <ActivityIndicator color="#fff" /> : <Text style={styles.withdrawText}>Withdraw</Text>}
               </LinearGradient>
             </TouchableOpacity>

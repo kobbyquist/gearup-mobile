@@ -16,8 +16,8 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import { AppAlertCard } from '../../components/AppAlert';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
-const ACCENT = '#554000';
-const ACCENT_DEEP = '#392A00';
+const ACCENT = '#000814';
+const ACCENT_DEEP = '#001D3D';
 const CONDITIONS = ['New', 'Used - Like New', 'Used - Good', 'Used - Fair'];
 const CATEGORIES = ['Engine', 'Battery', 'Tires', 'Brakes', 'Suspension', 'Electrical', 'Body', 'Other'];
 const emptyForm = {

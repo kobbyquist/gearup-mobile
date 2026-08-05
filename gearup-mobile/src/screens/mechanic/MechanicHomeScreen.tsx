@@ -16,8 +16,8 @@ import { AppAlertCard } from '../../components/AppAlert';
 import { Image } from 'react-native';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
-const ACCENT = '#554000';
-const ACCENT_DEEP = '#392A00';
+const ACCENT = '#000814';
+const ACCENT_DEEP = '#001D3D';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -213,7 +213,7 @@ export default function MechanicHomeScreen({ navigation }: any) {
       <LinearGradient colors={[ACCENT, ACCENT_DEEP]} style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 🔧</Text>
+            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]}</Text>
             <Text style={styles.subGreeting}>Ready to help car owners?</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.85}>
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   subGreeting: { fontSize: FONT_SIZES.sm, color: '#fde68a', marginTop: 2 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fbbf24', justifyContent: 'center', alignItems: 'center' },
   avatarImage: { width: 44, height: 44, borderRadius: 22 },
-  avatarText: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: '#392A00' },
+  avatarText: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: '#001D3D' },
   availabilityRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: RADIUS.md, padding: SPACING.md },
   availabilityText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#fff' },
   statsRow: { flexDirection: 'row', padding: SPACING.lg, gap: SPACING.md },

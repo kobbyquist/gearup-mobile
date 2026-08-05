@@ -93,7 +93,7 @@ export default function MechanicMapScreen({ route, navigation }: any) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={['#554000', '#392A00']} style={styles.header}>
+      <LinearGradient colors={['#000814', '#001D3D']} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
@@ -144,13 +144,13 @@ export default function MechanicMapScreen({ route, navigation }: any) {
           </View>
           {myLocation && (
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#554000' }]} />
+              <View style={[styles.legendDot, { backgroundColor: '#000814' }]} />
               <Text style={styles.legendText}>You</Text>
             </View>
           )}
           {loadingLocation && (
             <View style={styles.legendItem}>
-              <ActivityIndicator size="small" color="#554000" />
+              <ActivityIndicator size="small" color="#000814" />
               <Text style={styles.legendText}>Getting your location...</Text>
             </View>
           )}
@@ -158,9 +158,9 @@ export default function MechanicMapScreen({ route, navigation }: any) {
 
         {routeInfo && (
           <View style={styles.routeInfoRow}>
-            <Ionicons name="time-outline" size={14} color="#554000" />
+            <Ionicons name="time-outline" size={14} color="#000814" />
             <Text style={styles.routeInfoText}>{routeInfo.duration}</Text>
-            <Ionicons name="speedometer-outline" size={14} color="#554000" style={{ marginLeft: 10 }} />
+            <Ionicons name="speedometer-outline" size={14} color="#000814" style={{ marginLeft: 10 }} />
             <Text style={styles.routeInfoText}>{routeInfo.distance}</Text>
           </View>
         )}
@@ -188,7 +188,7 @@ export default function MechanicMapScreen({ route, navigation }: any) {
               fetchRoute();
             }
           }}>
-          <LinearGradient colors={['#554000', '#392A00']} style={styles.directionsGradient}>
+          <LinearGradient colors={['#000814', '#001D3D']} style={styles.directionsGradient}>
             {fetchingRoute ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
@@ -227,7 +227,7 @@ export default function MechanicMapScreen({ route, navigation }: any) {
 
             <TouchableOpacity style={styles.modalOption} onPress={openGoogleMaps}>
               <View style={[styles.modalIconWrap, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="navigate" size={20} color="#554000" />
+                <Ionicons name="navigate" size={20} color="#000814" />
               </View>
               <Text style={styles.modalOptionText}>Google Maps</Text>
               <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
@@ -252,14 +252,14 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: FONT_SIZES.xs, color: '#fde68a', marginTop: 2 },
   map: { flex: 1 },
   ownerPin: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1b4332', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
-  mechanicPin: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#554000', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  mechanicPin: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#000814', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
   infoCard: { backgroundColor: '#fff', padding: SPACING.lg, paddingBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 8 },
   infoRow: { flexDirection: 'row', gap: SPACING.lg, marginBottom: SPACING.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 12, height: 12, borderRadius: 6 },
   legendText: { fontSize: FONT_SIZES.sm, color: '#6b7280', fontWeight: '500' },
   routeInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md, backgroundColor: '#fffbeb', paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.md, alignSelf: 'flex-start' },
-  routeInfoText: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#554000', marginLeft: 4 },
+  routeInfoText: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#000814', marginLeft: 4 },
   jobInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 4 },
   jobInfoText: { fontSize: FONT_SIZES.xs, color: '#6b7280' },
   costText: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: '#1b4332', marginTop: 6 },

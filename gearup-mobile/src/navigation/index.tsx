@@ -28,7 +28,7 @@ import BankAccountScreen from '../screens/mechanic/BankAccountScreen';
 import WithdrawScreen from '../screens/mechanic/WithdrawScreen';
 
 const Stack = createNativeStackNavigator();
-const SPLASH_DURATION = 1400;
+const SPLASH_DURATION = 2800;
 const SPLASH_FADE_DURATION = 500;
 
 export default function Navigation() {

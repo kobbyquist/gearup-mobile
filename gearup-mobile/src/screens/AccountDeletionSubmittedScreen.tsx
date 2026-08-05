@@ -9,8 +9,8 @@ import { SPACING, FONT_SIZES, RADIUS } from '../constants';
 export default function AccountDeletionSubmittedScreen({ navigation }: any) {
   const { user } = useSelector((state: RootState) => state.auth);
   const isOwner = user?.role === 'OWNER';
-  const accentColor = isOwner ? '#1b4332' : '#554000';
-  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#554000', '#392A00'];
+  const accentColor = isOwner ? '#1b4332' : '#000814';
+  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#000814', '#001D3D'];
 
   return (
     <View style={styles.container}>

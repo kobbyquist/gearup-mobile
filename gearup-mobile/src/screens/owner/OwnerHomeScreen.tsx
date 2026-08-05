@@ -83,7 +83,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
           results.push({
             key: `payment-${recentCompleted.id}`,
             icon: 'cash-outline',
-            color: '#554000',
+            color: '#000814',
             bg: '#fffbeb',
             title: 'Job completed — payment due',
             subtitle: `${recentCompleted.title} · GHS ${recentCompleted.finalCost || 0}`,
@@ -94,7 +94,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
         results.push({
           key: `payment-${recentCompleted.id}`,
           icon: 'cash-outline',
-          color: '#554000',
+          color: '#000814',
           bg: '#fffbeb',
           title: 'Job completed — payment due',
           subtitle: `${recentCompleted.title} · GHS ${recentCompleted.finalCost || 0}`,
@@ -128,7 +128,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
           results.push({
             key: `vehicle-${v.id}-${field}`,
             icon: 'alert-circle-outline',
-            color: daysLeft < 0 ? '#dc2626' : '#554000',
+            color: daysLeft < 0 ? '#dc2626' : '#000814',
             bg: daysLeft < 0 ? '#fef2f2' : '#fffbeb',
             title: daysLeft < 0 ? `${label} expired` : `${label} expiring soon`,
             subtitle: `${v.make} ${v.model} · ${formatDate(dateStr)}`,
@@ -226,7 +226,7 @@ const [updates, setUpdates] = useState<UpdateCardData[]>([]);
       <LinearGradient colors={['#1b4332', '#2d6a4f']} style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 👋</Text>
+            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]}</Text>
             <Text style={styles.subGreeting}>What do you need help with today?</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.85}>

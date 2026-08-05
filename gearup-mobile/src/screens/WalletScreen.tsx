@@ -27,8 +27,8 @@ const formatDateTime = (dateStr: string) => {
 export default function WalletScreen({ navigation }: any) {
   const { user } = useSelector((state: RootState) => state.auth);
   const isOwner = user?.role === 'OWNER';
-  const accentColor = isOwner ? '#1b4332' : '#554000';
-  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#554000', '#392A00'];
+  const accentColor = isOwner ? '#1b4332' : '#000814';
+  const gradientColors = isOwner ? ['#1b4332', '#2d6a4f'] : ['#000814', '#001D3D'];
 
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
@@ -179,6 +179,6 @@ const styles = StyleSheet.create({
   txnIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   txnTitle: { fontSize: FONT_SIZES.sm, fontWeight: '700', color: '#1b1b1b' },
   txnDate: { fontSize: FONT_SIZES.xs, color: '#9ca3af', marginTop: 2 },
-  txnStatus: { fontSize: 10, fontWeight: '700', color: '#554000', marginTop: 2 },
+  txnStatus: { fontSize: 10, fontWeight: '700', color: '#000814', marginTop: 2 },
   txnAmount: { fontSize: FONT_SIZES.sm, fontWeight: '800' },
 });

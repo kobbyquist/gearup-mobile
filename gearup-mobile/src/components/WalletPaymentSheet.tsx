@@ -113,7 +113,7 @@ export default function WalletPaymentSheet({
           ) : (
             <>
               <View style={styles.shortfallBox}>
-                <Ionicons name="alert-circle-outline" size={16} color="#554000" />
+                <Ionicons name="alert-circle-outline" size={16} color="#000814" />
                 <Text style={styles.shortfallText}>
                   Your balance is GHS {balance.toFixed(2)}. You need GHS {(amount - balance).toFixed(2)} more to pay for this job.
                 </Text>

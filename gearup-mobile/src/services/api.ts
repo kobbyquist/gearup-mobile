@@ -88,6 +88,7 @@ const extractErrorMessage = (data: any, fallback: string): string => {
 };
 
 export const post = async (url: string, body: object, requiresAuth = false) => {
+  console.log('POST →', url);
   const headers: any = { 'Content-Type': 'application/json' };
   if (requiresAuth) {
     const token = await getToken();

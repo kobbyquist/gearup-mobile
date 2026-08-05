@@ -32,7 +32,7 @@ const LABELS: Record<string, string> = {
   Messages: 'Chats',
   Profile: 'Profile',
 };
-const ACTIVE_COLOR = '#554000';
+const ACTIVE_COLOR = '#000814';
 const INACTIVE_COLOR = '#9ca3af';
 
 function TabButton({ routeName, focused, onPress, showDot }: { routeName: string; focused: boolean; onPress: () => void; showDot?: boolean }) {

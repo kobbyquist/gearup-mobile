@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -30,9 +29,11 @@ export default function SplashScreen() {
           styles.content,
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="construct" size={48} color="#fbbf24" />
-        </View>
+        <Image
+          source={require('../../assets/LOGO.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>GearUp</Text>
         <Text style={styles.tagline}>Your mechanic, wherever you are.</Text>
       </Animated.View>
@@ -43,10 +44,9 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { alignItems: 'center', gap: 12 },
-  iconCircle: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    justifyContent: 'center', alignItems: 'center',
+  logo: {
+    width: 96,
+    height: 96,
     marginBottom: 8,
   },
   title: { fontSize: 36, fontWeight: '800', color: '#ffffff', letterSpacing: 0.5 },

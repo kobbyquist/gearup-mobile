@@ -1078,23 +1078,42 @@ function PartCardBubble({
                 </View>
               </View>
             )}
-            {meta.status === 'ACCEPTED' && !isOwner && (
-              <View style={styles.jobCardActionsFullRow}>
-                <AnimatedActionButton
-                  style={styles.completeBtn}
-                  textStyle={styles.completeBtnText}
-                  icon="checkmark-done"
-                  iconColor="#fff"
-                  label="Mark as Sold"
-                  onPress={handleMarkSold}
-                  disabled={processing}
-                  loading={processing}
-                />
-              </View>
-            )}
-            {meta.status === 'ACCEPTED' && isOwner && (
-              <Text style={styles.awaitingText}>Reserved for you — waiting for the seller to complete the sale…</Text>
-            )}
+            {meta.status === 'ACCEPTED' && !isOwner && !meta.isPaid && (
+  <Text style={styles.awaitingText}>Reserved — waiting for the buyer to pay…</Text>
+)}
+{meta.status === 'ACCEPTED' && !isOwner && meta.isPaid && (
+  <View style={styles.jobCardActionsFullRow}>
+    <AnimatedActionButton
+      style={styles.completeBtn}
+      textStyle={styles.completeBtnText}
+      icon="checkmark-done"
+      iconColor="#fff"
+      label="Mark as Sold"
+      onPress={handleMarkSold}
+      disabled={processing}
+      loading={processing}
+    />
+  </View>
+)}
+{meta.status === 'ACCEPTED' && isOwner && !meta.isPaid && (
+  <View style={styles.jobCardActionsFullRow}>
+    <AnimatedActionButton
+      style={styles.payBtnCard}
+      textStyle={styles.payBtnCardText}
+      icon="card"
+      iconColor="#fff"
+      label={`Pay GHS ${meta.price}`}
+      onPress={() => setShowPaymentModal(true)}
+      disabled={processing}
+    />
+  </View>
+)}
+{meta.status === 'ACCEPTED' && isOwner && meta.isPaid && (
+  <View style={styles.paidBadgeChat}>
+    <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+    <Text style={styles.paidBadgeChatText}>Paid — waiting for seller to mark as sold</Text>
+  </View>
+)}
             {meta.status === 'COMPLETED' && meta.isPaid && (
               <View style={styles.paidBadgeChat}>
                 <Ionicons name="checkmark-circle" size={14} color="#10b981" />
@@ -1583,7 +1602,7 @@ const pickFromLibrary = async () => {
     });
   };
 
-  const accentColor = isOwner ? '#1b4332' : '#554000';
+  const accentColor = isOwner ? '#1b4332' : '#000814';
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMine = item.sender_id === myId;
@@ -1741,7 +1760,7 @@ const pickFromLibrary = async () => {
   };
   const headerColor = isOwner
     ? ['#1b4332', '#2d6a4f']
-    : ['#554000', '#392A00'];
+    : ['#000814', '#001D3D'];
 
   return (
     <View style={styles.container}>
@@ -1820,7 +1839,7 @@ const pickFromLibrary = async () => {
                 onPress={handleSend}
                 disabled={!newMessage.trim() || sending}>
                 <LinearGradient
-                  colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#554000', '#392A00']}
+                  colors={isOwner ? ['#1b4332', '#2d6a4f'] : ['#000814', '#001D3D']}
                   style={styles.sendBtnGradient}>
                   {sending ? (
                     <ActivityIndicator size="small" color="#fff" />
@@ -1866,12 +1885,14 @@ const pickFromLibrary = async () => {
                   </View>
                   <Text style={styles.attachMenuText}>Voice Note</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.attachMenuOption} onPress={() => { setAttachMenuVisible(false); openCreateJob(); }}>
-                  <View style={[styles.attachMenuIconWrap, { backgroundColor: '#f5f3ff' }]}>
-                    <Ionicons name="briefcase" size={20} color="#7c3aed" />
-                  </View>
-                  <Text style={styles.attachMenuText}>New Job</Text>
-                </TouchableOpacity>
+                {isOwner && (
+  <TouchableOpacity style={styles.attachMenuOption} onPress={() => { setAttachMenuVisible(false); openCreateJob(); }}>
+    <View style={[styles.attachMenuIconWrap, { backgroundColor: '#f5f3ff' }]}>
+      <Ionicons name="briefcase" size={20} color="#7c3aed" />
+    </View>
+    <Text style={styles.attachMenuText}>New Job</Text>
+  </TouchableOpacity>
+)}
               </View>
             </TouchableOpacity>
           </Modal>

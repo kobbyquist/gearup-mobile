@@ -593,7 +593,7 @@ export default function CreateJobModal({ visible, onClose, vehicles, userId, loc
               )}
               {requestType === 'DIRECT' && selectedMechanic && !selectedMechanic.acceptingBookings && (
                 <View style={styles.availabilityHintWarn}>
-                  <Ionicons name="alert-circle-outline" size={14} color="#554000" />
+                  <Ionicons name="alert-circle-outline" size={14} color="#000814" />
                   <Text style={styles.availabilityHintWarnText}>
                     {selectedMechanic.name} hasn't set up scheduled bookings — this request will be treated as ASAP.
                   </Text>
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   availabilityHint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   availabilityHintText: { fontSize: FONT_SIZES.xs, color: '#7c3aed', flex: 1 },
   availabilityHintWarn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  availabilityHintWarnText: { fontSize: FONT_SIZES.xs, color: '#554000', flex: 1 },
+  availabilityHintWarnText: { fontSize: FONT_SIZES.xs, color: '#000814', flex: 1 },
   pickerContainer: { backgroundColor: '#fff', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#e5e7eb', marginTop: 8, overflow: 'hidden' },
   picker: { height: 200, backgroundColor: '#fff' },
   pickerDoneBtn: { padding: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f3f4f6' },

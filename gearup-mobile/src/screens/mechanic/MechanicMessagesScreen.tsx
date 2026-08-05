@@ -15,8 +15,8 @@ import { userService } from '../../services/userService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { SPACING, FONT_SIZES, RADIUS } from '../../constants';
 
-const ACCENT = '#554000';
-const ACCENT_DEEP = '#392A00';
+const ACCENT = '#000814';
+const ACCENT_DEEP = '#001D3D';
 
 // ─── ConversationCard: its own component so entrance-animation hooks are safe/stable ───
 function ConversationCard({
