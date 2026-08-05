@@ -24,8 +24,10 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -47,6 +49,11 @@
         }
       ],
       "expo-audio"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b31cf0e4-ddc3-460b-9378-f8f0cf48cd8f"
+      }
+    }
   }
 }
