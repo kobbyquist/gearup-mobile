@@ -353,23 +353,6 @@
     <p class="section-eyebrow">See it in action</p>
     <h2 class="ss-main-title" id="ss-main-title">The owner experience</h2>
     <p class="ss-main-desc" id="ss-main-desc">Everything a car owner needs, in one clean app. Scroll through each screen below.</p>
-
-    <!-- Owner / Mechanic toggle -->
-    <div class="ss-toggle-group" id="ss-toggle-group">
-      <button class="ss-toggle-btn active" id="ss-toggle-owner" data-side="owner">
-        <i data-lucide="user" class="ss-toggle-icon"></i>
-        Owner
-      </button>
-      <button class="ss-toggle-btn" id="ss-toggle-mechanic" data-side="mechanic">
-        <i data-lucide="wrench" class="ss-toggle-icon"></i>
-        Mechanic
-      </button>
-    </div>
-
-    <button class="ss-slideshow-btn" id="ss-slideshow-btn" aria-label="Start autoplay" aria-pressed="false">
-      <i data-lucide="play" class="ss-slideshow-icon" id="ss-play-icon"></i>
-      <span id="ss-btn-label">Autoplay</span>
-    </button>
   </div>
 
   <!-- ── SCREENSHOTS SCROLL CONTAINER ─────────────────────────── -->
@@ -388,19 +371,12 @@
         <button class="ss-dot" data-index="5" data-side="owner" aria-label="Jobs &amp; Chat"></button>
         <button class="ss-dot" data-index="6" data-side="owner" aria-label="Wallet &amp; Profile"></button>
         <!-- Mechanic dots (hidden by default) -->
-        <button class="ss-dot ss-dot-mechanic" data-index="0" data-side="mechanic" aria-label="Login"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="1" data-side="mechanic" aria-label="Home"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="2" data-side="mechanic" aria-label="Available Jobs"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="3" data-side="mechanic" aria-label="Job Details"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="4" data-side="mechanic" aria-label="Active Job"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="5" data-side="mechanic" aria-label="Chat"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="6" data-side="mechanic" aria-label="Parts Market"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="7" data-side="mechanic" aria-label="Earnings"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="8" data-side="mechanic" aria-label="Wallet"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="9" data-side="mechanic" aria-label="Profile"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="10" data-side="mechanic" aria-label="Settings"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="11" data-side="mechanic" aria-label="Notifications"></button>
-        <button class="ss-dot ss-dot-mechanic" data-index="12" data-side="mechanic" aria-label="Reviews"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="0" data-side="mechanic" aria-label="Home"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="1" data-side="mechanic" aria-label="Jobs"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="2" data-side="mechanic" aria-label="Chat"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="3" data-side="mechanic" aria-label="Parts Market"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="4" data-side="mechanic" aria-label="Wallet &amp; Earnings"></button>
+        <button class="ss-dot ss-dot-mechanic" data-index="5" data-side="mechanic" aria-label="Profile"></button>
       </div>
       <div class="ss-label-row">
         <span class="ss-panel-label" id="ss-label">Login</span>
@@ -497,13 +473,13 @@
         <div class="ss-panel">
           <div class="ss-panel-phones">
             <div class="ss-pw tertiary">
-              <img src="images/photo_2026-08-04_01-40-48.jpg" alt="SOS Vehicle Select" loading="lazy" />
+              <img src="images/SOS FEATURE (1).jpg" alt="SOS Vehicle Select" loading="lazy" />
             </div>
             <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-04_01-40-47.jpg" alt="SOS Map" loading="lazy" />
+              <img src="images/SOS FEATURE (2).jpg" alt="SOS Map" loading="lazy" />
             </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-04_01-40-46.jpg" alt="SOS Confirm" loading="lazy" />
+              <img src="images/SOS FEATURE (3).jpg" alt="SOS Confirm" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
@@ -566,30 +542,11 @@
              MECHANIC PANELS (hidden until mechanic side active)
              ═══════════════════════════════════════════════════ -->
 
-        <!-- MECH PANEL 0: Login -->
+        <!-- MECH PANEL 0: Home -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-53.jpg" alt="Mechanic Login" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge onboarding-badge"><i data-lucide="log-in" class="ss-badge-icon"></i> Sign In</div>
-            <h3 class="ss-title">One login, two roles</h3>
-            <p class="ss-body">Mechanics use the same secure login. After signing in, the app detects your role and loads the mechanic dashboard automatically.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Email and password login</li>
-              <li><i data-lucide="check" class="check-icon"></i> Role-aware session — mechanic view loads instantly</li>
-              <li><i data-lucide="check" class="check-icon"></i> Secure session management</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 1: Home -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-54.jpg" alt="Mechanic Home" loading="lazy" />
+              <img src="images/MECHANIC HOME.jpg" alt="Mechanic Home" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
@@ -604,18 +561,18 @@
           </div>
         </div>
 
-        <!-- MECH PANEL 2: Available Jobs -->
+        <!-- MECH PANEL 1: Jobs -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
             <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-05_00-47-55.jpg" alt="Job List" loading="lazy" />
+              <img src="images/MECHANIC JOBS  (1).jpg" alt="Job List" loading="lazy" />
             </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-56.jpg" alt="Job Detail" loading="lazy" />
+              <img src="images/MECHANIC JOBS  (2).jpg" alt="Job Detail" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
-            <div class="ss-badge find-badge"><i data-lucide="clipboard-list" class="ss-badge-icon"></i> Available Jobs</div>
+            <div class="ss-badge find-badge"><i data-lucide="clipboard-list" class="ss-badge-icon"></i> Jobs</div>
             <h3 class="ss-title">Browse and accept jobs near you</h3>
             <p class="ss-body">See all open job requests sorted by distance. Tap any card to review the full details — vehicle, issue, and location — before accepting.</p>
             <ul class="ss-points">
@@ -626,52 +583,14 @@
           </div>
         </div>
 
-        <!-- MECH PANEL 3: Job Details -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-57.jpg" alt="Job Details" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge jobs-badge"><i data-lucide="file-text" class="ss-badge-icon"></i> Job Details</div>
-            <h3 class="ss-title">Everything you need before you go</h3>
-            <p class="ss-body">See the owner's vehicle, the problem description, their precise location on the map, and the proposed price — all before you accept.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Vehicle make, model and year</li>
-              <li><i data-lucide="check" class="check-icon"></i> Owner location on live map</li>
-              <li><i data-lucide="check" class="check-icon"></i> Set your own quote before accepting</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 4: Active Job -->
+        <!-- MECH PANEL 2: Chat -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
             <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-05_00-47-57 (2).jpg" alt="Active Job Map" loading="lazy" />
+              <img src="images/MECHANIC CHAT (1).jpg" alt="Chat List" loading="lazy" />
             </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-58.jpg" alt="Active Job Status" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge sos-badge"><i data-lucide="navigation" class="ss-badge-icon"></i> Active Job</div>
-            <h3 class="ss-title">Navigate and update in one screen</h3>
-            <p class="ss-body">Once accepted, navigate directly to the owner. Update job status as you go — Accepted, In Progress, Completed — so the owner always knows what's happening.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Turn-by-turn navigation to owner</li>
-              <li><i data-lucide="check" class="check-icon"></i> One-tap status updates</li>
-              <li><i data-lucide="check" class="check-icon"></i> Owner notified at every step</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 5: Chat -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-59.jpg" alt="Mechanic Chat" loading="lazy" />
+              <img src="images/MECHANIC CHAT (2).jpg" alt="Chat Thread" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
@@ -686,14 +605,14 @@
           </div>
         </div>
 
-        <!-- MECH PANEL 6: Parts Market -->
+        <!-- MECH PANEL 3: Parts Market -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
             <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-05_00-48-00 (2).jpg" alt="Parts List" loading="lazy" />
+              <img src="images/MECHANIC PARTS  (1).jpg" alt="Parts List" loading="lazy" />
             </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-48-00.jpg" alt="Parts Detail" loading="lazy" />
+              <img src="images/MECHANIC PARTS  (2).jpg" alt="Parts Detail" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
@@ -708,36 +627,23 @@
           </div>
         </div>
 
-        <!-- MECH PANEL 7: Earnings -->
+        <!-- MECH PANEL 4: Wallet & Earnings -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
+            <div class="ss-pw tertiary">
+              <img src="images/MECHANIC WALLET (3).jpg" alt="Wallet Balance" loading="lazy" />
+            </div>
+            <div class="ss-pw secondary">
+              <img src="images/MECHANIC WALLET (1).jpg" alt="Wallet Top Up" loading="lazy" />
+            </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-48-01.jpg" alt="Earnings" loading="lazy" />
+              <img src="images/MECHANIC WALLET (2).jpg" alt="Wallet Withdraw" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
-            <div class="ss-badge wallet-badge"><i data-lucide="trending-up" class="ss-badge-icon"></i> Earnings</div>
-            <h3 class="ss-title">Track every cedi you earn</h3>
-            <p class="ss-body">Your earnings screen shows daily, weekly, and monthly totals. Every completed job is logged with the amount and date so nothing slips through.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Daily, weekly, and monthly breakdowns</li>
-              <li><i data-lucide="check" class="check-icon"></i> Full job-by-job transaction log</li>
-              <li><i data-lucide="check" class="check-icon"></i> Withdraw to your bank anytime</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 8: Wallet -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-48-02.jpg" alt="Mechanic Wallet" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge wallet-badge"><i data-lucide="wallet" class="ss-badge-icon"></i> Wallet</div>
-            <h3 class="ss-title">Get paid, withdraw fast</h3>
-            <p class="ss-body">Payment lands in your GearUp wallet the moment a job is confirmed. Check your balance, view transaction history, and withdraw to mobile money or bank.</p>
+            <div class="ss-badge wallet-badge"><i data-lucide="wallet" class="ss-badge-icon"></i> Wallet &amp; Earnings</div>
+            <h3 class="ss-title">Get paid, track every cedi, withdraw fast</h3>
+            <p class="ss-body">Payment lands in your GearUp wallet the moment a job is confirmed. Check your balance, view transaction history, and withdraw to mobile money anytime.</p>
             <ul class="ss-points">
               <li><i data-lucide="check" class="check-icon"></i> Instant payment on job completion</li>
               <li><i data-lucide="check" class="check-icon"></i> Full transaction history</li>
@@ -746,11 +652,14 @@
           </div>
         </div>
 
-        <!-- MECH PANEL 9: Profile -->
+        <!-- MECH PANEL 5: Profile -->
         <div class="ss-panel ss-panel-mechanic">
           <div class="ss-panel-phones">
+            <div class="ss-pw secondary">
+              <img src="images/MECHANIC PROFILE (1).jpg" alt="Mechanic Profile" loading="lazy" />
+            </div>
             <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-48-03.jpg" alt="Mechanic Profile" loading="lazy" />
+              <img src="images/MECHANIC PROFILE (2).jpg" alt="Mechanic Profile Edit" loading="lazy" />
             </div>
           </div>
           <div class="ss-panel-desc">
@@ -761,69 +670,6 @@
               <li><i data-lucide="check" class="check-icon"></i> Specializations and service areas</li>
               <li><i data-lucide="check" class="check-icon"></i> Star rating and review count</li>
               <li><i data-lucide="check" class="check-icon"></i> Completed jobs history</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 10: Settings / Availability -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-05_00-47-53.jpg" alt="Availability" loading="lazy" />
-            </div>
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-54.jpg" alt="Settings" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge onboarding-badge"><i data-lucide="calendar-check" class="ss-badge-icon"></i> Availability</div>
-            <h3 class="ss-title">Work on your schedule</h3>
-            <p class="ss-body">Toggle availability on or off at any time. Set your working hours so you only receive job requests when you're actually ready to work.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> One-tap online/offline toggle</li>
-              <li><i data-lucide="check" class="check-icon"></i> Set custom working hours</li>
-              <li><i data-lucide="check" class="check-icon"></i> No jobs pushed when you're offline</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 11: Notifications -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-55.jpg" alt="Notifications" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge sos-badge"><i data-lucide="bell" class="ss-badge-icon"></i> Notifications</div>
-            <h3 class="ss-title">Never miss a job request</h3>
-            <p class="ss-body">Push notifications alert you the instant a new job comes in near you. Tap to review the full details and accept before another mechanic does.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Instant push for new job requests</li>
-              <li><i data-lucide="check" class="check-icon"></i> Payment and chat alerts</li>
-              <li><i data-lucide="check" class="check-icon"></i> Manageable notification preferences</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- MECH PANEL 12: Reviews -->
-        <div class="ss-panel ss-panel-mechanic">
-          <div class="ss-panel-phones">
-            <div class="ss-pw secondary">
-              <img src="images/photo_2026-08-05_00-47-56.jpg" alt="Review List" loading="lazy" />
-            </div>
-            <div class="ss-pw primary">
-              <img src="images/photo_2026-08-05_00-47-57.jpg" alt="Review Detail" loading="lazy" />
-            </div>
-          </div>
-          <div class="ss-panel-desc">
-            <div class="ss-badge find-badge"><i data-lucide="star" class="ss-badge-icon"></i> Reviews</div>
-            <h3 class="ss-title">Build your reputation one job at a time</h3>
-            <p class="ss-body">Every completed job earns a rating and review from the car owner. Your overall score is displayed publicly to help new customers choose you with confidence.</p>
-            <ul class="ss-points">
-              <li><i data-lucide="check" class="check-icon"></i> Star ratings from every completed job</li>
-              <li><i data-lucide="check" class="check-icon"></i> Written reviews visible on your profile</li>
-              <li><i data-lucide="check" class="check-icon"></i> Higher ratings attract more bookings</li>
             </ul>
           </div>
         </div>
@@ -843,6 +689,25 @@
         <i data-lucide="mouse" class="ss-scroll-icon"></i>
         <span>Scroll to explore</span>
         <i data-lucide="arrow-right" class="ss-scroll-icon"></i>
+      </div>
+
+      <!-- ── Sticky controls bar: Owner/Mechanic toggle + Autoplay ── -->
+      <div class="ss-controls-bar">
+        <div class="ss-toggle-group" id="ss-toggle-group">
+          <button class="ss-toggle-btn active" id="ss-toggle-owner" data-side="owner">
+            <i data-lucide="user" class="ss-toggle-icon"></i>
+            Owner
+          </button>
+          <button class="ss-toggle-btn" id="ss-toggle-mechanic" data-side="mechanic">
+            <i data-lucide="wrench" class="ss-toggle-icon"></i>
+            Mechanic
+          </button>
+          <div class="ss-toggle-divider"></div>
+          <button class="ss-toggle-btn ss-autoplay-btn" id="ss-slideshow-btn" aria-label="Start autoplay" aria-pressed="false">
+            <i data-lucide="play" class="ss-slideshow-icon" id="ss-play-icon"></i>
+            <span id="ss-btn-label">Autoplay</span>
+          </button>
+        </div>
       </div>
 
     </div><!-- /.ss-sticky -->

@@ -330,22 +330,11 @@ section, .ss-outer, .ss-header-outer { margin-bottom: -1px; }
 .ss-header-outer {
   background: var(--green-deep);
   text-align: center;
-  padding: 80px 24px 40px;
+  padding: 80px 24px 32px;
 }
 .ss-header-outer .section-eyebrow { color: var(--green-soft); }
 .ss-main-title { font-size: clamp(1.8rem,4vw,2.6rem); font-weight: 800; color: var(--white); letter-spacing: -.03em; margin-bottom: 12px; }
-.ss-main-desc { font-size: 1rem; color: rgba(255,255,255,.55); margin-bottom: 28px; }
-.ss-slideshow-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(82,183,136,.15); border: 1px solid rgba(82,183,136,.35);
-  color: var(--green-soft); padding: 10px 22px; border-radius: 999px;
-  font-size: .88rem; font-weight: 600; font-family: var(--font);
-  cursor: pointer; transition: background .2s, border-color .2s, transform .15s;
-}
-.ss-slideshow-btn:hover { background: rgba(82,183,136,.25); border-color: rgba(82,183,136,.6); transform: translateY(-1px); }
-.ss-slideshow-btn.playing { background: rgba(82,183,136,.3); border-color: rgba(82,183,136,.8); }
-.ss-slideshow-btn.playing:hover { background: rgba(82,183,136,.4); }
-.ss-slideshow-icon { width: 18px; height: 18px; stroke: var(--green-soft); stroke-width: 2; }
+.ss-main-desc { font-size: 1rem; color: rgba(255,255,255,.55); margin-bottom: 0; }
 
 /* ── SCREENSHOTS SCROLL CONTAINER ────────────────────────────── */
 .ss-outer {
@@ -354,11 +343,11 @@ section, .ss-outer, .ss-header-outer { margin-bottom: -1px; }
   background: var(--green-deep);
 }
 .ss-sticky {
-  position: sticky; top: 0; height: 100vh;
+  position: sticky; top: 56px; height: calc(100vh - 56px);
   overflow: hidden; background: var(--green-deep);
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 20px 0 16px;
+  align-items: center; justify-content: space-between;
+  padding: 12px 0 0;
 }
 
 /* Dots */
@@ -439,14 +428,26 @@ section, .ss-outer, .ss-header-outer { margin-bottom: -1px; }
 .ss-arrow-next { right: 20px; }
 
 /* Scroll hint */
-.ss-scroll-hint { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.28); font-size: .72rem; font-weight: 500; margin-top: 12px; flex-shrink: 0; }
+.ss-scroll-hint { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.28); font-size: .72rem; font-weight: 500; margin-top: 4px; flex-shrink: 0; }
 .ss-scroll-icon { width: 13px; height: 13px; stroke: rgba(255,255,255,.28); stroke-width: 2; }
+
+/* Controls bar — toggle + autoplay, pinned at the bottom of the sticky viewport */
+.ss-controls-bar {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 24px 14px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,.07);
+  width: 100%;
+}
 
 /* ── SCREENSHOTS toggle group ────────────────────────────────── */
 .ss-toggle-group {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
-  border-radius: 999px; padding: 5px; margin-bottom: 20px;
+  border-radius: 999px; padding: 5px; gap: 2px;
+}
+.ss-toggle-divider {
+  width: 1px; height: 20px; background: rgba(255,255,255,.15); flex-shrink: 0; margin: 0 4px;
 }
 .ss-toggle-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -460,7 +461,14 @@ section, .ss-outer, .ss-header-outer { margin-bottom: -1px; }
   background: var(--green); color: var(--white);
   box-shadow: 0 2px 12px rgba(34,139,87,.4);
 }
+/* Autoplay pill shares the same group but uses a play-tinted active state */
+.ss-toggle-btn.ss-autoplay-btn { gap: 8px; }
+.ss-toggle-btn.ss-autoplay-btn.playing {
+  background: rgba(82,183,136,.3); color: var(--green-soft);
+  box-shadow: 0 2px 12px rgba(82,183,136,.25);
+}
 .ss-toggle-icon { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.2; flex-shrink: 0; }
+.ss-slideshow-icon { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.2; flex-shrink: 0; }
 
 /* Mechanic panels hidden by default; shown when side === mechanic */
 .ss-panel-mechanic { display: none; }
@@ -572,7 +580,7 @@ a.contrib-link:hover { background: var(--bg); color: var(--text); }
   .ss-arrow { display: none; }
   .ss-panel { flex-direction: column; gap: 24px; padding: 0 20px; }
   .ss-panel-desc { max-width: 100%; }
-  .ss-outer { height: calc(7 * 130vh); }
+  .ss-outer { height: calc(100vh - 56px); } /* single viewport on mobile — JS-driven index */
   .ss-pw.primary   { width: 160px; height: 345px; }
   .ss-pw.secondary { width: 140px; height: 302px; margin-right: -24px; margin-bottom: 20px; }
   .ss-pw.tertiary  { width: 122px; height: 263px; margin-left: -18px; margin-bottom: 38px; }
@@ -584,7 +592,7 @@ a.contrib-link:hover { background: var(--bg); color: var(--text); }
   .stat-divider { display: none; }
   .download-btns { flex-direction: column; align-items: center; }
   .footer-links { flex-direction: column; gap: 28px; }
-  .ss-outer { height: calc(7 * 150vh); }
+  .ss-outer { height: calc(100vh - 56px); } /* single viewport on mobile */
   .ss-pw.primary   { width: 130px; height: 280px; }
   .ss-pw.secondary { width: 113px; height: 244px; margin-right: -18px; }
   .ss-pw.tertiary  { width: 100px; height: 215px; margin-left: -14px; }

@@ -115,8 +115,8 @@ if (heroStats) statsObs.observe(heroStats);
       desc   : 'Everything a car owner needs, in one clean app. Scroll through each screen below.',
     },
     mechanic: {
-      panels : 13,
-      labels : ['Login','Home','Available Jobs','Job Details','Active Job','Chat','Parts Market','Earnings','Wallet','Profile','Availability','Notifications','Reviews'],
+      panels : 6,
+      labels : ['Home','Jobs','Chat','Parts Market','Wallet & Earnings','Profile'],
       title  : 'The mechanic experience',
       desc   : 'Every tool a mechanic needs to find work, manage jobs, and grow their business.',
     },
@@ -169,10 +169,15 @@ if (heroStats) statsObs.observe(heroStats);
   /* ── Apply active side ────────────────────────────────────── */
   function applySide(side, scrollToTop) {
     activeSide = side;
+    mobileIndex = 0;
     const c = cfg();
 
-    /* Update outer scroll height */
-    outer.style.height = c.panels + '00vh';
+    /* On mobile the section is a single viewport — no scroll-through */
+    if (isMobile()) {
+      outer.style.height = 'calc(100vh - 56px)';
+    } else {
+      outer.style.height = (c.panels * 100) + 'vh';
+    }
 
     /* Header text */
     if (mainTitle) mainTitle.textContent = c.title;
@@ -191,7 +196,6 @@ if (heroStats) statsObs.observe(heroStats);
       if (dSide === 'mechanic') {
         d.classList.toggle('ss-dot-visible', side === 'mechanic');
       }
-      /* owner dots are always block; just hide when mechanic is active */
       if (dSide === 'owner') {
         d.style.display = side === 'owner' ? '' : 'none';
       }
@@ -199,13 +203,17 @@ if (heroStats) statsObs.observe(heroStats);
 
     /* Re-bind dot click listeners for the active side */
     dotsEl.querySelectorAll(`.ss-dot[data-side="${side}"]`).forEach(dot => {
-      dot.onclick = () => window.scrollTo({ top: panelScrollTop(parseInt(dot.dataset.index, 10)), behavior: 'smooth' });
+      dot.onclick = () => {
+        const idx = parseInt(dot.dataset.index, 10);
+        if (isMobile()) {
+          setMobileIndex(idx);
+        } else {
+          window.scrollTo({ top: panelScrollTop(idx), behavior: 'smooth' });
+        }
+      };
     });
 
-    /* Track offset: mechanic panels start after 7 owner panels in the flex track */
-    // panel 0 of mechanic = physical index 7 in the track
-    // We jump scroll to top (panel 0 of this side)
-    if (scrollToTop) {
+    if (!isMobile() && scrollToTop) {
       const target = outer.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({ top: target, behavior: 'smooth' });
     }
@@ -242,8 +250,9 @@ if (heroStats) statsObs.observe(heroStats);
     if (btnNext) btnNext.disabled = index === c.panels - 1;
   }
 
-  /* ── Scroll handler ───────────────────────────────────────── */
+  /* ── Scroll handler (desktop only) ───────────────────────── */
   function onScroll() {
+    if (isMobile()) return;
     const n = cfg().panels;
     const rect      = outer.getBoundingClientRect();
     const maxScroll = outer.offsetHeight - window.innerHeight;
@@ -278,17 +287,37 @@ if (heroStats) statsObs.observe(heroStats);
   if (toggleMech)   toggleMech.addEventListener('click',   () => { stopPlay(); applySide('mechanic', true); });
 
   /* ── Autoplay ─────────────────────────────────────────────── */
+  function fadeToPanel(side, index) {
+    track.style.transition = 'opacity .4s ease';
+    track.style.opacity = '0';
+    setTimeout(() => {
+      applySide(side, false);
+      if (!isMobile()) {
+        window.scrollTo({ top: panelScrollTop(index), behavior: 'instant' });
+      }
+      track.style.opacity = '1';
+      setTimeout(() => { track.style.transition = ''; }, 450);
+    }, 380);
+  }
+
+  function activeIndex() {
+    return isMobile() ? mobileIndex : currentIndex();
+  }
+
   function advance() {
     const n    = cfg().panels;
-    const next = currentIndex() + 1;
+    const next = activeIndex() + 1;
 
     if (next < n) {
-      /* Still panels left on this side — advance */
-      window.scrollTo({ top: panelScrollTop(next), behavior: 'smooth' });
+      if (isMobile()) {
+        setMobileIndex(next);
+      } else {
+        window.scrollTo({ top: panelScrollTop(next), behavior: 'smooth' });
+      }
+    } else if (activeSide === 'owner') {
+      fadeToPanel('mechanic', 0);
     } else {
-      /* Reached end of this side — switch to the other side */
-      const nextSide = activeSide === 'owner' ? 'mechanic' : 'owner';
-      applySide(nextSide, true);
+      fadeToPanel('owner', 0);
     }
   }
 
@@ -300,12 +329,6 @@ if (heroStats) statsObs.observe(heroStats);
     playIcon.setAttribute('data-lucide', 'pause');
     lucide.createIcons();
     btnLabel.textContent = 'Pause';
-    /* If already at the very end of both sides, restart from owner panel 0 */
-    if (activeSide === 'mechanic' && currentIndex() >= SIDES.mechanic.panels - 1) {
-      applySide('owner', true);
-    } else if (activeSide === 'owner' && currentIndex() >= SIDES.owner.panels - 1) {
-      // let it naturally flow to mechanic side on next tick
-    }
     timer = setInterval(advance, AUTOPLAY_INTERVAL);
   }
 
@@ -331,6 +354,88 @@ if (heroStats) statsObs.observe(heroStats);
     if (!playing) return;
     const rect = outer.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > window.innerHeight) stopPlay();
+  }, { passive: true });
+
+  /* ── Mobile detection ────────────────────────────────────── */
+  function isMobile() { return window.innerWidth <= 768; }
+
+  /* ── Mobile panel state (index driven, not scroll driven) ── */
+  let mobileIndex = 0;
+
+  function setMobileIndex(idx) {
+    const n = cfg().panels;
+    mobileIndex = Math.max(0, Math.min(idx, n - 1));
+    updateUI(mobileIndex);
+  }
+
+  /* ── Touch swipe ──────────────────────────────────────────── */
+  let touchStartX  = 0;
+  let touchStartY  = 0;
+  let touchDeltaX  = 0;
+  let touchLocked  = null; // 'h' = horizontal, 'v' = vertical, null = undecided
+
+  const sticky = document.querySelector('.ss-sticky');
+
+  sticky.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchDeltaX = 0;
+    touchLocked = null;
+  }, { passive: true });
+
+  sticky.addEventListener('touchmove', e => {
+    if (!isMobile()) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+
+    /* Decide lock direction once we have enough movement */
+    if (touchLocked === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      touchLocked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    }
+
+    if (touchLocked === 'h') {
+      /* Horizontal swipe — block vertical scroll and show live drag on track */
+      e.preventDefault();
+      touchDeltaX = dx;
+      const ownerPanels = SIDES.owner.panels;
+      const physicalBase = activeSide === 'mechanic'
+        ? (ownerPanels + mobileIndex) * 100
+        : mobileIndex * 100;
+      /* Clamp drag to ±60vw so it feels tethered */
+      const dragVw = Math.max(-60, Math.min(60, (dx / window.innerWidth) * 100));
+      track.style.transition = 'none';
+      track.style.transform  = `translateX(calc(-${physicalBase}vw + ${dragVw}vw))`;
+    }
+    /* If vertical — do nothing, let browser scroll normally */
+  }, { passive: false });
+
+  sticky.addEventListener('touchend', e => {
+    if (!isMobile() || touchLocked !== 'h') return;
+
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const threshold = window.innerWidth * 0.25; // 25% of screen width
+
+    /* Snap to next/prev or back to current */
+    track.style.transition = '';
+    if (dx < -threshold && mobileIndex < cfg().panels - 1) {
+      setMobileIndex(mobileIndex + 1);
+    } else if (dx > threshold && mobileIndex > 0) {
+      setMobileIndex(mobileIndex - 1);
+    } else {
+      updateUI(mobileIndex); // snap back
+    }
+    touchDeltaX = 0;
+    touchLocked = null;
+  }, { passive: true });
+
+  /* ── On resize — recalculate height and re-render ─────────── */
+  window.addEventListener('resize', () => {
+    applySide(activeSide, false);
+    if (isMobile()) {
+      updateUI(mobileIndex);
+    } else {
+      onScroll();
+    }
   }, { passive: true });
 
   /* ── Init ─────────────────────────────────────────────────── */
